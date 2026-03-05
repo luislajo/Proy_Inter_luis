@@ -3,6 +3,7 @@ import { roomDatabaseModel } from "../models/roomsModel.js"
 import mongoose from "mongoose";
 import { userDatabaseModel } from "../models/usersModel.js";
 import { sendEmail } from "../lib/mail/mailing.js";
+import { auditLogModel } from "../models/auditLogModel.js";
 /**
  * Obtener una reserva específica a partir de su ID
  * 
@@ -33,7 +34,7 @@ export async function getOneBookingById(req, res) {
 
         const booking = await bookingDatabaseModel.findById(id);
         if (!booking) return res.status(404).json({ error: 'Reserva no encontrada' });
-        
+
         return res.status(200).json(booking);
     }
     catch (error) {
@@ -67,7 +68,7 @@ export async function getBookings(req, res) {
     try {
         const bookings = await bookingDatabaseModel.find();
         if (bookings.length == 0) return res.status(404).json({ error: 'No se encontraron reservas' });
-        
+
         return res.status(200).json(bookings);
     }
     catch (error) {
@@ -140,10 +141,10 @@ export async function getBookingsByClientId(req, res) {
 export async function getBookingsByRoomId(req, res) {
     try {
         const { id } = req.params;
-        if (!id) return res.status(400).json({error: 'Se requiere ID de la habitación'});
+        if (!id) return res.status(400).json({ error: 'Se requiere ID de la habitación' });
         if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'No es un ID' })
 
-        const bookings = await bookingDatabaseModel.find({ room: id});
+        const bookings = await bookingDatabaseModel.find({ room: id });
         if (!bookings) return res.status(404).json({ error: 'No se ha encontrado reservas para la habitación' });
 
         return res.status(200).json(bookings);
@@ -179,24 +180,24 @@ export async function createBooking(req, res) {
     try {
         const { client, room, checkInDate, checkOutDate, guests } = req.body;
 
-        if (!room) return res.status(400).json({ error: 'Se requiere ID de habitación'});
-        if (!client) return res.status(400).json({ error: 'Se requiere ID de cliente'});
+        if (!room) return res.status(400).json({ error: 'Se requiere ID de habitación' });
+        if (!client) return res.status(400).json({ error: 'Se requiere ID de cliente' });
         if (!checkInDate) return res.status(400).json({ error: 'Se requiere fecha de check in' });
-        if (!checkOutDate) return res.status(400).json({ error: 'Se requiere fecha de check out'});
+        if (!checkOutDate) return res.status(400).json({ error: 'Se requiere fecha de check out' });
         if (!guests) return res.status(400).json({ error: 'Se requiere cantidad de huéspedes' });
 
         const dbRoom = await roomDatabaseModel.findById(room);
         if (!dbRoom) return res.status(404).json({ error: 'No se encuentra habitación con ese ID' });
-        
+
         const booking = new BookingEntryData(room, client, checkInDate, checkOutDate, guests);
-        
+
         if (guests > dbRoom.maxGuests) return res.status(400).json({ error: 'Se supera el límite de huéspedes de la habitación' })
-        
+
         booking.completeBookingData(dbRoom.pricePerNight, dbRoom.offer);
         try {
             await booking.validate()
         }
-        catch(err) {
+        catch (err) {
             return res.status(400).json({ error: err.message });
         }
 
@@ -205,6 +206,18 @@ export async function createBooking(req, res) {
 
         const bdBooking = await booking.save()
         const populated = await bdBooking.poblar()
+
+        // Registro de auditoría para la creación
+        auditLogModel.create({
+            entity_type: 'booking',
+            entity_id: bdBooking._id,
+            action: 'CREATE',
+            actor_id: req.user.id,
+            actor_type: req.user.rol,
+            previous_state: null,
+            new_state: bdBooking.toJSON(),
+            timestamp: new Date()
+        }).catch(err => console.error('Error al crear audit log:', err));
 
         sendEmail(user.email, "Reserva confirmada", "newBooking", populated)
         return res.status(201).json(bdBooking)
@@ -241,15 +254,29 @@ export async function cancelBooking(req, res) {
         const { id } = req.params;
         if (!id) return res.status(400).json({ error: 'No hay ID de la reserva' })
         if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'No es un ID' })
-        
+
         const booking = await bookingDatabaseModel.findById(id);
         if (!booking) return res.status(404).json({ error: 'No hay reserva con este ID' });
         if (booking.status != 'Abierta') return res.status(400).json({ error: 'La reserva no está abierta' })
 
+        // Guardar estado anterior antes de cancelar
+        const previousState = booking.toJSON();
+
         booking.status = 'Cancelada';
         const bookingUpdated = await booking.save();
 
-        
+        // Registro de auditoría para la cancelación
+        auditLogModel.create({
+            entity_type: 'booking',
+            entity_id: bookingUpdated._id,
+            action: 'CANCEL',
+            actor_id: req.user.id,
+            actor_type: req.user.rol,
+            previous_state: previousState,
+            new_state: bookingUpdated.toJSON(),
+            timestamp: new Date()
+        }).catch(err => console.error('Error al crear audit log:', err));
+
         const populated = await bookingUpdated.poblar();
         const user = await userDatabaseModel.findById(bookingUpdated.client);
         sendEmail(user.email, "Reserva cancelada", "cancelBooking", populated)
@@ -289,20 +316,23 @@ export async function updateBooking(req, res) {
         const { checkInDate, checkOutDate, guests } = req.body;
         if (!checkInDate || !checkOutDate || !guests) return res.status(400).json({ error: 'Faltan datos necesarios' })
         if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'No es un ID' })
-        
+
         const booking = await bookingDatabaseModel.findById(id);
         if (!booking) return res.status(404).json({ error: 'No hay reserva con este ID' });
+
+        // Guardar estado anterior antes de actualizar
+        const previousState = booking.toJSON();
 
         const bookingData = new BookingEntryData(booking.room, booking.client, checkInDate, checkOutDate, guests);
         bookingData.fromDocument(booking);
 
         const room = await roomDatabaseModel.findById(booking.room);
         if (guests > room.maxGuests) return res.status(400).json({ error: 'Se supera el límite de huéspedes de la habitación' })
-        
+
         try {
             await bookingData.validate()
         }
-        catch(err) {
+        catch (err) {
             return res.status(400).json({ error: err.message });
         }
 
@@ -314,9 +344,22 @@ export async function updateBooking(req, res) {
         }
 
         const updatedBooking = await bookingData.save();
+
+        // Registro de auditoría para la actualización
+        auditLogModel.create({
+            entity_type: 'booking',
+            entity_id: updatedBooking._id,
+            action: 'UPDATE',
+            actor_id: req.user.id,
+            actor_type: req.user.rol,
+            previous_state: previousState,
+            new_state: updatedBooking.toJSON(),
+            timestamp: new Date()
+        }).catch(err => console.error('Error al crear audit log:', err));
+
         return res.status(200).json(updatedBooking)
     }
-    
+
     catch (error) {
         console.error('Error al actualizar la reserva:', error);
         return res.status(500).json({ error: 'Error del servidor al actualizar la reserva' })
@@ -348,12 +391,28 @@ export async function deleteBooking(req, res) {
     try {
         const { id } = req.params;
         if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'No es un ID' })
-        
+
         const booking = await bookingDatabaseModel.findById(id);
         if (!booking) return res.status(404).json({ error: 'No hay reserva con ese ID' })
         if (booking.status != 'Cancelada') return res.status(400).json({ error: 'Solo se pueden eliminar reservas canceladas' });
 
+        // Guardar estado anterior antes de eliminar
+        const previousState = booking.toJSON();
+
         await bookingDatabaseModel.findByIdAndDelete(id);
+
+        // Registro de auditoría para la eliminación
+        auditLogModel.create({
+            entity_type: 'booking',
+            entity_id: id,
+            action: 'DELETE',
+            actor_id: req.user.id,
+            actor_type: req.user.rol,
+            previous_state: previousState,
+            new_state: null,
+            timestamp: new Date()
+        }).catch(err => console.error('Error al crear audit log:', err));
+
         return res.status(200).json({ status: 'Reserva eliminada correctamente' });
     }
     catch (error) {
