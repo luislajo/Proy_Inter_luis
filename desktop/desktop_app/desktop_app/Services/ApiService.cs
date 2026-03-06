@@ -11,7 +11,7 @@ namespace desktop_app.Services
         /// <summary>
         /// URL Base en la que nos basamos.
         /// </summary>
-        public const string BaseUrl = "http://51.255.198.95:4000/";
+        public const string BaseUrl = "http://51.38.186.140:4000/";
 
         /// <summary>
         /// Cliente HTTP reutilizable configurado con autenticación automática.
