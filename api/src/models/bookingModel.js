@@ -77,7 +77,7 @@ const bookingDatabaseSchema = new Schema({
     }
 });
 
-bookingDatabaseSchema.methods.poblar = async function() {
+bookingDatabaseSchema.methods.poblar = async function () {
     const userObject = await userDatabaseModel.findById(this.client).lean();
     const roomObject = await roomDatabaseModel.findById(this.room).lean();
 
@@ -149,11 +149,11 @@ export class BookingEntryData {
      */
     async validate() {
         function isNumeric(o) {
-            return typeof(o) === 'number' && o > 0
+            return typeof (o) === 'number' && o > 0
         }
         function isValidDate(d) {
             return d instanceof Date && !isNaN(d.getTime());
-        }        
+        }
 
         const errors = [];
         if (!isValidObjectId(this.roomID)) errors.push("El ID de la habitación es inválido");
@@ -191,7 +191,7 @@ export class BookingEntryData {
             }
         }
 
-        
+
         if (!isNumeric(this.guests)) errors.push("La cantidad de huéspedes debe ser un número mayor que 0");
 
         if (errors.length != 0) {
@@ -206,15 +206,17 @@ export class BookingEntryData {
     save() {
         if (!this.ready) throw new Error("Reserva no lista. Completa la información");
         const doc = this.doc ?? new bookingDatabaseModel();
-        const data = {room: this.roomID, 
-                        client: this.clientID, 
-                        checkInDate: this.checkInDate.toISOString(), 
-                        checkOutDate: this.checkOutDate.toISOString(), 
-                        totalPrice: this.totalPrice, 
-                        pricePerNight: this.pricePerNight, 
-                        offer: this.offer, 
-                        guests: this.guests, 
-                        totalNights: this.totalNights};
+        const data = {
+            room: this.roomID,
+            client: this.clientID,
+            checkInDate: this.checkInDate.toISOString(),
+            checkOutDate: this.checkOutDate.toISOString(),
+            totalPrice: this.totalPrice,
+            pricePerNight: this.pricePerNight,
+            offer: this.offer,
+            guests: this.guests,
+            totalNights: this.totalNights
+        };
         return doc.set(data).save();
     }
 

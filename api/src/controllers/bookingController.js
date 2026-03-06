@@ -15,8 +15,6 @@ import { auditLogModel } from "../models/auditLogModel.js";
  * Busca la reserva correspondiente y la devuelve en formato JSON
  * Maneja errores de validación, no encontrar la reserva y errores del servidor
  * 
- * @param {import('types').AuthenticatedRequest} req - Objeto de petición de Express
- * 
  * @param {import('express').Response} res - Objeto de respuesta de Express
  * 
  * 
@@ -54,7 +52,6 @@ export async function getOneBookingById(req, res) {
  * Busca todas las reservas y las devuelve en formato JSON
  * Maneja errores de no encontrar la reserva y errores del servidor
  * 
- * @param {import('types').AuthenticatedRequest} req - Objeto de petición de Express
  * 
  * @param {import('express').Response} res - Objeto de respuesta de Express
  * 
@@ -89,7 +86,6 @@ export async function getBookings(req, res) {
  * Busca las reservas del cliente y las devuelve en formato JSON
  * Maneja errores de validación, no encontrar reservas y errores del servidor
  * 
- * @param {import('types').AuthenticatedRequest} req - Objeto de petición de Express
  * 
  * @param {import('express').Response} res - Objeto de respuesta de Express
  * 
@@ -128,8 +124,6 @@ export async function getBookingsByClientId(req, res) {
  * Busca las reservas de la habitación y las devuelve en formato JSON
  * Maneja errores de validación, no encontrar reservas y errores del servidor
  * 
- * @param {import('types').AuthenticatedRequest} req - Objeto de petición de Express
- * 
  * @param {import('express').Response} res - Objeto de respuesta de Express
  * 
  * @returns {Promise} Respuesta HTTP con:
@@ -167,7 +161,6 @@ export async function getBookingsByRoomId(req, res) {
  * Crea una nueva reserva y la devuelve en formato JSON
  * Valida la existencia y validez de datos y los errores de servidor
  *
- * @param {import('types').AuthenticatedRequest} req - Objeto de petición de Express.
  * @param {import('express').Response} res - Objeto de respuesta de Express.
  *
  * @returns {Promise} Respuesta HTTP con:
@@ -205,6 +198,7 @@ export async function createBooking(req, res) {
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
         const bdBooking = await booking.save()
+        // @ts-ignore - poblar es un método definido en el schema
         const populated = await bdBooking.poblar()
 
         // Registro de auditoría para la creación
@@ -240,7 +234,7 @@ export async function createBooking(req, res) {
  * Cancela la reserva si su estado es Abierta y devuelve la reserva cerrada
  * Verifica la validez del ID, la existencia y el estado de la reserva 
  *
- * @param {import('types').AuthenticatedRequest} req - Objeto de petición de Express.
+ *
  * @param {import('express').Response} res - Objeto de respuesta de Express.
  *
  * @returns {Promise} Respuesta HTTP con:
@@ -277,6 +271,7 @@ export async function cancelBooking(req, res) {
             timestamp: new Date()
         }).catch(err => console.error('Error al crear audit log:', err));
 
+        // @ts-ignore - poblar es un método definido en el schema
         const populated = await bookingUpdated.poblar();
         const user = await userDatabaseModel.findById(bookingUpdated.client);
         sendEmail(user.email, "Reserva cancelada", "cancelBooking", populated)
@@ -301,7 +296,6 @@ export async function cancelBooking(req, res) {
  * Actualiza la reserva
  * Verifica la existencia y validez de los datos y errores de servidor
  *
- * @param {import('types').AuthenticatedRequest} req - Objeto de petición de Express.
  * @param {import('express').Response} res - Objeto de respuesta de Express.
  *
  * @returns {Promise} Respuesta HTTP con:
@@ -378,7 +372,6 @@ export async function updateBooking(req, res) {
  * Elimina la reserva si está cancelada
  * Verifica la validez del ID, la existencia y el estado de la reserva 
  *
- * @param {import('types').AuthenticatedRequest} req - Objeto de petición de Express.
  * @param {import('express').Response} res - Objeto de respuesta de Express.
  *
  * @returns {Promise} Respuesta HTTP con:
