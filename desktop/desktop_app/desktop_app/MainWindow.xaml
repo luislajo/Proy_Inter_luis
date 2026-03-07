@@ -42,6 +42,12 @@
                     <TextBlock>Habitaciones</TextBlock>
                 </StackPanel>
             </Button>
+            <Button Command="{Binding ShowAuditCommand}" Style="{StaticResource SideBarButton}">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="/Resources/Images/bookingIcon.png" Style="{StaticResource SideBarIcon}"/>
+                    <TextBlock>Historial</TextBlock>
+                </StackPanel>
+            </Button>
         </StackPanel>
 
         <ScrollViewer x:Name="MainScrollViewer" Grid.Column="1">

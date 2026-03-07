@@ -2,6 +2,39 @@ import { auditLogModel } from '../models/auditLogModel.js';
 import mongoose from 'mongoose';
 
 /**
+ * Obtener el historial de auditoría global
+ * 
+ * @async
+ * @function getAllAuditLogs
+ * 
+ * @description
+ * Devuelve todos los registros de auditoría del sistema ordenados cronológicamente (más recientes primero)
+ * 
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * 
+ * @returns {Promise} Respuesta HTTP con:
+ * - 200 y el array de registros de auditoría
+ * - 404 si no se encuentran registros
+ * - 500 si ocurre un error del servidor
+ */
+export async function getAllAuditLogs(req, res) {
+    try {
+        const logs = await auditLogModel
+            .find({})
+            .sort({ timestamp: -1 })
+            .lean();
+
+        if (logs.length === 0) return res.status(404).json({ error: 'No se encontraron registros de auditoría' });
+
+        return res.status(200).json(logs);
+    } catch (error) {
+        console.error('Error al obtener audit logs globales:', error);
+        return res.status(500).json({ error: 'Error del servidor' });
+    }
+}
+
+/**
  * Obtener el historial de auditoría de una reserva
  * 
  * @async

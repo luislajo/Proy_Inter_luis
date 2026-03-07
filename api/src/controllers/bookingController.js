@@ -213,6 +213,26 @@ export async function createBooking(req, res) {
             timestamp: new Date()
         }).catch(err => console.error('Error al crear audit log:', err));
 
+        // Registro de auditoría para el pago de la habitación
+        auditLogModel.create({
+            entity_type: 'booking',
+            entity_id: bdBooking._id,
+            action: 'PAYMENT',
+            actor_id: req.user.id,
+            actor_type: req.user.rol,
+            previous_state: null,
+            new_state: {
+                totalPrice: bdBooking.totalPrice,
+                pricePerNight: bdBooking.pricePerNight,
+                offer: bdBooking.offer,
+                totalNights: bdBooking.totalNights,
+                payDate: bdBooking.payDate,
+                room: bdBooking.room,
+                client: bdBooking.client
+            },
+            timestamp: new Date()
+        }).catch(err => console.error('Error al crear audit log de pago:', err));
+
         sendEmail(user.email, "Reserva confirmada", "newBooking", populated)
         return res.status(201).json(bdBooking)
     }
