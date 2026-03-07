@@ -6,7 +6,7 @@ import { Schema, Types, model } from 'mongoose';
  * @property {import('mongoose').Types.ObjectId} _id
  * @property {"booking"|"room"} entity_type - Tipo de entidad afectada
  * @property {import('mongoose').Types.ObjectId} entity_id - ID de la reserva o habitación
- * @property {"CREATE"|"UPDATE"|"CANCEL"|"DELETE"} action - Acción realizada
+ * @property {"CREATE"|"UPDATE"|"CANCEL"|"DELETE"|"PAYMENT"} action - Acción realizada
  * @property {import('mongoose').Types.ObjectId} actor_id - ID del usuario que realiza la acción
  * @property {"Admin"|"Trabajador"|"Usuario"} actor_type - Rol del actor
  * @property {Object|null} previous_state - Estado anterior (null en CREATE)
@@ -27,7 +27,7 @@ const auditLogSchema = new Schema({
     },
     action: {
         type: String,
-        enum: ['CREATE', 'UPDATE', 'CANCEL', 'DELETE'],
+        enum: ['CREATE', 'UPDATE', 'CANCEL', 'DELETE', 'PAYMENT'],
         required: true
     },
     actor_id: {

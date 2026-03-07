@@ -12,7 +12,7 @@ import { roomDatabaseModel } from '../models/roomsModel.js';
  * @returns {import('express').RequestHandler}
  */
 export function auditMiddleware(entityType, paramName = 'id') {
-    const Model = entityType === 'booking' ? bookingDatabaseModel : roomDatabaseModel;
+    const Model = /** @type {any} */ (entityType === 'booking' ? bookingDatabaseModel : roomDatabaseModel);
 
     return async (req, res, next) => {
         try {
@@ -22,28 +22,29 @@ export function auditMiddleware(entityType, paramName = 'id') {
 
             // Guardar el estado anterior del documento
             const previousDoc = await Model.findById(entityId).lean();
-            req._auditPreviousState = previousDoc || null;
+            const auditPreviousState = previousDoc || null;
 
             // Determinar la acción según el método HTTP y la URL
-            req._auditAction = determineAction(req.method, req.originalUrl);
-            req._auditEntityType = entityType;
-            req._auditEntityId = entityId;
+            const auditAction = determineAction(req.method, req.originalUrl);
+
+            // Obtener usuario del request (con casting manual para evitar TS errors locales)
+            const reqUser = /** @type {any} */ (req).user || {};
 
             // Sobreescribir res.json para capturar la respuesta
             const originalJson = res.json.bind(res);
             res.json = (body) => {
                 // Solo registrar si la respuesta es exitosa (2xx)
                 if (res.statusCode >= 200 && res.statusCode < 300) {
-                    const newState = req._auditAction === 'DELETE' ? null : body;
+                    const newState = auditAction === 'DELETE' ? null : body;
 
                     // Insertar el log de forma asíncrona (no bloquea la respuesta)
                     auditLogModel.create({
                         entity_type: entityType,
                         entity_id: entityId,
-                        action: req._auditAction,
-                        actor_id: req.user.id,
-                        actor_type: req.user.rol,
-                        previous_state: req._auditPreviousState,
+                        action: auditAction,
+                        actor_id: reqUser.id,
+                        actor_type: reqUser.rol,
+                        previous_state: auditPreviousState,
                         new_state: newState,
                         timestamp: new Date()
                     }).catch(err => console.error('Error al crear audit log:', err));
@@ -64,7 +65,7 @@ export function auditMiddleware(entityType, paramName = 'id') {
  * Determina la acción de auditoría según el método HTTP y la URL
  * @param {string} method - Método HTTP (PATCH, DELETE, etc.)
  * @param {string} url - URL original de la petición
- * @returns {"UPDATE"|"CANCEL"|"DELETE"}
+ * @returns {"UPDATE"|"CANCEL"|"DELETE"|"PAYMENT"}
  */
 function determineAction(method, url) {
     if (method === 'DELETE') return 'DELETE';
