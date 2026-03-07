@@ -14,6 +14,7 @@ import usersRouter from "./routers/usersRouter.js";
 import authRouter from "./routers/authRouter.js";
 import photoRouter from "./lib/image/imageRouter.js";
 import reviewsRouter from "./routers/reviewsRouter.js";
+import auditRouter from "./routers/auditRouter.js";
 dotenv.config();
 connectDB()
 connectEmail();
@@ -40,6 +41,7 @@ app.use("/user", usersRouter);
 app.use("/auth", authRouter);
 app.use("/image", photoRouter);
 app.use("/review", reviewsRouter);
+app.use("/audit", auditRouter);
 
 app.listen(PORT, () => {
   console.log(`Servidor en el puerto ${PORT}`);

@@ -25,5 +25,10 @@ namespace desktop_app.ViewModels
         /// Comando que navega a la vista de habitaciones
         /// </summary>
         public ICommand ShowRoomsCommand { get; } = new RelayCommand(_ => NavigationService.Instance.NavigateTo<RoomView>());
+
+        /// <summary>
+        /// Comando que navega a la vista de historial de auditoría
+        /// </summary>
+        public ICommand ShowAuditCommand { get; } = new RelayCommand(_ => NavigationService.Instance.NavigateTo<AuditLogView>());
     }
 }
