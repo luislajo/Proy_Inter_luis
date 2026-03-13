@@ -7,7 +7,8 @@ import {
     createBooking,
     cancelBooking,
     updateBooking,
-    deleteBooking
+    deleteBooking,
+    payBooking
 } from "../controllers/bookingController.js";
 import { getAuditLogByBookingId } from "../controllers/auditLogController.js";
 import { verifyToken, authorizeRoles } from "../middlewares/authMiddleware.js";
@@ -21,6 +22,7 @@ router.get("/room/:id", verifyToken, authorizeRoles(["Admin", "Trabajador"]), ge
 router.get("/", verifyToken, getBookings);
 
 router.post("/", verifyToken, createBooking);
+router.post("/:id/pay", verifyToken, payBooking);
 
 router.patch("/:id/cancel", verifyToken, cancelBooking);
 router.patch("/:id", verifyToken, updateBooking);

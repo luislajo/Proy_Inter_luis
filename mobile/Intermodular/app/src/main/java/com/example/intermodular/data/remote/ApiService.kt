@@ -76,6 +76,19 @@ interface ApiService {
 
 
     /**
+     * Registra el pago de una reserva en la auditoría
+     * @author Luis Lajo
+     *
+     * @param id - ID de la reserva a pagar
+     * @return [BookingDto] - Objeto con la información de la reserva actualizada
+     */
+    @POST("booking/{id}/pay")
+    suspend fun payBooking(
+        @Path("id") id: String
+    ): BookingDto
+
+
+    /**
      * Cancela una reserva existente
      * @author Axel Zaragoci
      *

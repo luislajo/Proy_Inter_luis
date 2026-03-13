@@ -44,68 +44,90 @@ namespace desktop_app.Models
         // ── Propiedades calculadas para la UI ──
 
         /// <summary>
-        /// Resumen legible de los cambios detectados
+        /// Texto visible en la columna "Resumen"
         /// </summary>
         [JsonIgnore]
-        public string DifferencesSummary
+        public string SummaryText
         {
             get
             {
-                try
+                if (Action == "CREATE") return $"Se creó {EntityType}";
+                if (Action == "DELETE") return $"Se eliminó {EntityType}";
+
+                if (Action == "PAYMENT")
                 {
-                    if (Action == "CREATE")
-                        return $"Se creó {EntityType}";
-
-                    if (Action == "DELETE")
-                        return $"Se eliminó {EntityType}";
-
-                    if (Action == "PAYMENT")
+                    if (NewState.HasValue && NewState.Value.ValueKind == JsonValueKind.Object)
                     {
-                        if (NewState.HasValue && NewState.Value.ValueKind == JsonValueKind.Object)
-                        {
-                            var nights = NewState.Value.TryGetProperty("totalNights", out var n) ? n.ToString() : "?";
-                            var price = NewState.Value.TryGetProperty("totalPrice", out var p) ? p.ToString() : "?";
-                            return $"Pago por {nights} noches: {price}€";
-                        }
-                        return "Pago realizado";
+                        var nights = NewState.Value.TryGetProperty("totalNights", out var n) ? n.ToString() : "?";
+                        var price = NewState.Value.TryGetProperty("totalPrice", out var p) ? p.ToString() : "?";
+                        return $"Pago por {nights} noches: {price}€";
                     }
-
-                    if (Action == "UPDATE" || Action == "CANCEL")
-                    {
-                        if (!PreviousState.HasValue || PreviousState.Value.ValueKind != JsonValueKind.Object ||
-                            !NewState.HasValue || NewState.Value.ValueKind != JsonValueKind.Object)
-                            return "Cambios detectados";
-
-                        var diffs = new List<string>();
-                        var prevDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(PreviousState.Value.GetRawText());
-                        var newDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(NewState.Value.GetRawText());
-
-                        if (prevDict != null && newDict != null)
-                        {
-                            foreach (var key in newDict.Keys)
-                            {
-                                if (key == "_id" || key == "__v" || key == "updatedAt") continue;
-
-                                var newVal = newDict[key].ToString();
-                                var prevVal = prevDict.ContainsKey(key) ? prevDict[key].ToString() : "—";
-
-                                if (prevVal != newVal)
-                                    diffs.Add($"{key}: {prevVal} → {newVal}");
-                            }
-                        }
-
-                        return diffs.Count > 0
-                            ? string.Join(", ", diffs)
-                            : "Sin cambios relevantes";
-                    }
-
-                    return Action;
+                    return "Pago realizado";
                 }
-                catch
+
+                if (Action == "UPDATE" || Action == "CANCEL")
                 {
-                    return "Cambios detectados";
+                    var diffs = GetDifferences();
+                    return diffs.Count > 0
+                        ? $"{diffs.Count} mod"
+                        : "Sin cambios";
+                }
+
+                return Action;
+            }
+        }
+
+        /// <summary>
+        /// Texto a mostrar en el Tooltip al poner el ratón encima
+        /// </summary>
+        [JsonIgnore]
+        public string TooltipText
+        {
+            get
+            {
+                if (Action == "UPDATE" || Action == "CANCEL")
+                {
+                    var diffs = GetDifferences();
+                    return diffs.Count > 0
+                        ? string.Join("\n", diffs)
+                        : "Sin cambios relevantes";
+                }
+
+                return SummaryText;
+            }
+        }
+
+        private List<string> GetDifferences()
+        {
+            var diffs = new List<string>();
+            try
+            {
+                if (!PreviousState.HasValue || PreviousState.Value.ValueKind != JsonValueKind.Object ||
+                    !NewState.HasValue || NewState.Value.ValueKind != JsonValueKind.Object)
+                    return diffs;
+
+                var prevDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(PreviousState.Value.GetRawText());
+                var newDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(NewState.Value.GetRawText());
+
+                if (prevDict != null && newDict != null)
+                {
+                    foreach (var key in newDict.Keys)
+                    {
+                        if (key == "_id" || key == "__v" || key == "updatedAt" || key == "createdAt") continue;
+
+                        var newVal = newDict[key].ToString();
+                        var prevVal = prevDict.ContainsKey(key) ? prevDict[key].ToString() : "—";
+
+                        if (prevVal != newVal)
+                            diffs.Add($"{key}: {prevVal} => {newVal}");
+                    }
                 }
             }
+            catch { }
+
+            return diffs;
+
         }
     }
 }
+      

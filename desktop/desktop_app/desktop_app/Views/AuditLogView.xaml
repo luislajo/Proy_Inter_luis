@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:viewmodels="clr-namespace:desktop_app.ViewModels"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="800"
+             d:DesignHeight="600" d:DesignWidth="900"
              Style="{StaticResource UserControlBase}">
 
     <UserControl.Resources>
@@ -23,7 +23,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- ================= HEADER (idéntico a RoomView) ================= -->
+        <!-- ================= HEADER ================= -->
         <Border Grid.Row="0" Style="{StaticResource HeaderWrapper}">
             <Grid>
                 <Grid.RowDefinitions>
@@ -38,46 +38,44 @@
                                Style="{StaticResource HeaderMainTitle}"/>
                 </DockPanel>
 
-                <!-- Card blanca de filtros (mismo estilo que RoomView) -->
+                <!-- Filtros -->
                 <Border Grid.Row="1"
                         Background="#F7FAFD"
                         CornerRadius="14"
                         Padding="12"
                         Margin="0,14,0,0">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                    <DockPanel LastChildFill="False">
+                        <!-- Botón buscar -->
+                        <Button DockPanel.Dock="Right"
+                                Style="{StaticResource SaveBtn}" Content="Buscar"
+                                Command="{Binding SearchCommand}"
+                                Height="38" Width="120" FontSize="14" FontWeight="SemiBold"
+                                VerticalAlignment="Bottom"/>
 
-                        <!-- Fila 0: Input del filtro -->
-                        <StackPanel Margin="0,0,0,10">
+                        <!-- Filtro acción -->
+                        <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,16,0">
                             <Label Content="Acción" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
                             <ComboBox Style="{StaticResource DropdownStyle}"
-                                      Width="180"
-                                      HorizontalAlignment="Left"
+                                      Width="160"
                                       ItemsSource="{Binding FilterOptions}"
                                       SelectedItem="{Binding SelectedFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
 
-                        <!-- Fila 1: Botones a la derecha -->
-                        <Grid Grid.Row="1" Margin="0,5,0,5">
-                            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
-                                <Button Style="{StaticResource ClearFiltersBtn}" Content="Limpiar"
-                                        Command="{Binding ClearFiltersCommand}"
-                                        Height="38" Padding="15,0" Margin="0,0,10,0" FontSize="14"/>
-                                <Button Style="{StaticResource SaveBtn}" Content="Buscar"
-                                        Command="{Binding SearchCommand}"
-                                        Height="38" Width="120" FontSize="14" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Grid>
-                    </Grid>
+                        <!-- Filtro colección -->
+                        <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                            <Label Content="Colección" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                            <ComboBox Style="{StaticResource DropdownStyle}"
+                                      Width="160"
+                                      ItemsSource="{Binding FilterCollectionOptions}"
+                                      SelectedItem="{Binding SelectedCollectionFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </DockPanel>
                 </Border>
             </Grid>
         </Border>
 
-        <!-- ===== Status + Refrescar (mismo estilo que RoomView) ===== -->
-        <Grid Grid.Row="1" Margin="0,14,0,14">
+        <!-- ===== Status + Refrescar ===== -->
+        <Grid Grid.Row="1" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -99,68 +97,82 @@
                    HorizontalAlignment="Center" VerticalAlignment="Top"
                    Margin="0,10,0,0" Foreground="#6B7280" FontSize="14"/>
 
-        <!-- ===== TIMELINE LIST ===== -->
-        <ScrollViewer Grid.Row="2" Margin="0,5,0,0">
-            <ItemsControl ItemsSource="{Binding Logs}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="70"/>
-                                <ColumnDefinition Width="24"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+        <!-- ===== TABLA (ListView + GridView) ===== -->
+        <ListView Grid.Row="2" 
+                  ItemsSource="{Binding Logs}" 
+                  SizeChanged="ListView_SizeChanged"
+                  AlternationCount="2" 
+                  ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}" 
+                  Margin="0,5,0,0" 
+                  BorderThickness="0.5">
+            <ListView.View>
+                <GridView>
+                    <!-- Fecha -->
+                    <GridViewColumn Header="Fecha" HeaderContainerStyle="{StaticResource TableHeader}">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Timestamp, StringFormat='dd/MM/yyyy HH:mm'}" 
+                                           Style="{StaticResource GridViewCellText}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
 
-                            <!-- Fecha -->
-                            <StackPanel Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,5,0">
-                                <TextBlock Text="{Binding Timestamp, StringFormat='dd/MM/yyyy'}"
-                                           FontWeight="Bold" FontSize="11" Foreground="#4B5563" TextAlignment="Right"/>
-                                <TextBlock Text="{Binding Timestamp, StringFormat='HH:mm'}"
-                                           FontSize="11" Foreground="#6B7280" TextAlignment="Right"/>
-                            </StackPanel>
+                    <!-- Acción -->
+                    <GridViewColumn Header="Acción" HeaderContainerStyle="{StaticResource TableHeader}">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource AuditActionStyle}" HorizontalAlignment="Center" Padding="8,3">
+                                    <TextBlock Text="{Binding Action}" Style="{StaticResource GridViewCellText}" Foreground="#ffffff" Padding="0"/>
+                                </Border>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
 
-                            <!-- Línea de tiempo -->
-                            <Grid Grid.Column="1" HorizontalAlignment="Center">
-                                <Rectangle Width="2" Fill="#D1D5DB" Margin="0,22,0,0"
-                                           HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
-                                <Ellipse Width="14" Height="14" Fill="#004A8F" Stroke="White"
-                                         StrokeThickness="2" VerticalAlignment="Top" Margin="0,6,0,0"/>
-                            </Grid>
+                    <!-- Tipo de entidad -->
+                    <GridViewColumn Header="Entidad" HeaderContainerStyle="{StaticResource TableHeader}">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding EntityType}" 
+                                           Style="{StaticResource GridViewCellText}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
 
-                            <!-- Card del log -->
-                            <Border Grid.Column="2" Background="White" CornerRadius="10"
-                                    Padding="16" Margin="8,0,0,0"
-                                    BorderBrush="#E5E7EB" BorderThickness="1">
-                                <StackPanel>
-                                    <!-- Acción + Entidad -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Border CornerRadius="4" Background="#EAF3FD" Padding="6,2" Margin="0,0,8,0">
-                                            <TextBlock Text="{Binding Action}" FontWeight="SemiBold"
-                                                       Foreground="#004A8F" FontSize="12"/>
-                                        </Border>
-                                        <TextBlock Text="{Binding EntityType}" FontWeight="SemiBold"
-                                                   FontSize="14" VerticalAlignment="Center"/>
-                                    </StackPanel>
+                    <!-- ID Entidad -->
+                    <GridViewColumn Header="ID" HeaderContainerStyle="{StaticResource TableHeader}">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding EntityId}" 
+                                           Style="{StaticResource GridViewCellText}"
+                                           ToolTip="{Binding EntityId}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
 
-                                    <!-- Resumen de cambios -->
-                                    <TextBlock Text="{Binding DifferencesSummary}" TextWrapping="Wrap"
-                                               Margin="0,2,0,6" FontSize="13" Foreground="#374151"/>
+                    <!-- Resumen -->
+                    <GridViewColumn Header="Resumen" HeaderContainerStyle="{StaticResource TableHeader}">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding SummaryText}" 
+                                           Style="{StaticResource GridViewCellText}"
+                                           ToolTip="{Binding TooltipText}"
+                                           ToolTipService.InitialShowDelay="100"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
 
-                                    <!-- Actor -->
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Actor:" FontWeight="SemiBold" FontSize="11"
-                                                   Foreground="#9CA3AF" Margin="0,0,4,0"/>
-                                        <TextBlock Text="{Binding ActorType}" FontSize="11" Foreground="#6B7280"/>
-                                        <TextBlock Text=" (" FontSize="11" Foreground="#6B7280"/>
-                                        <TextBlock Text="{Binding ActorId}" FontSize="11" Foreground="#6B7280"/>
-                                        <TextBlock Text=")" FontSize="11" Foreground="#6B7280"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                    <!-- Actor -->
+                    <GridViewColumn Header="Actor" HeaderContainerStyle="{StaticResource TableHeader}">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding ActorType}" 
+                                           Style="{StaticResource GridViewCellText}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                        
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
     </Grid>
 </UserControl>
