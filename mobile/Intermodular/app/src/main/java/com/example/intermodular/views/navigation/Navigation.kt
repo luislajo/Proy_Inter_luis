@@ -124,11 +124,12 @@ fun Navigation(
             // Obtener dependencias necesarias
             val api = RetrofitProvider.api
             val repository = UserRepository(api)
+            val bookingRepository = BookingRepository(api)
             val sessionManager = SessionManager
 
             // Crear ViewModel con su factory personalizada
             val viewModel: UserViewModel = viewModel(
-                factory = UserViewModelFactory(repository, sessionManager)
+                factory = UserViewModelFactory(repository, bookingRepository, sessionManager)
             )
 
             // Cargar pantalla conectada al estado
@@ -157,11 +158,12 @@ fun Navigation(
             // Obtener dependencias necesarias
             val api = RetrofitProvider.api
             val repository = UserRepository(api)
+            val bookingRepository = BookingRepository(api)
             val sessionManager = SessionManager
 
             // Crear ViewModel con su factory personalizada
             val viewModel: UserViewModel = viewModel(
-                factory = UserViewModelFactory(repository, sessionManager)
+                factory = UserViewModelFactory(repository, bookingRepository, sessionManager)
             )
 
             // Cargar pantalla conectada al estado

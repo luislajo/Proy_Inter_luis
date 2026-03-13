@@ -51,29 +51,15 @@ namespace desktop_app.Models
         {
             get
             {
-                if (Action == "CREATE") return $"Se creó {EntityType}";
-                if (Action == "DELETE") return $"Se eliminó {EntityType}";
-
-                if (Action == "PAYMENT")
+                return Action switch
                 {
-                    if (NewState.HasValue && NewState.Value.ValueKind == JsonValueKind.Object)
-                    {
-                        var nights = NewState.Value.TryGetProperty("totalNights", out var n) ? n.ToString() : "?";
-                        var price = NewState.Value.TryGetProperty("totalPrice", out var p) ? p.ToString() : "?";
-                        return $"Pago por {nights} noches: {price}€";
-                    }
-                    return "Pago realizado";
-                }
-
-                if (Action == "UPDATE" || Action == "CANCEL")
-                {
-                    var diffs = GetDifferences();
-                    return diffs.Count > 0
-                        ? $"{diffs.Count} mod"
-                        : "Sin cambios";
-                }
-
-                return Action;
+                    "CREATE" => $"Se creó {EntityType}",
+                    "DELETE" => $"Se eliminó {EntityType}",
+                    "PAYMENT" => "Pago recibido",
+                    "UPDATE" => $"Se modificó {EntityType}",
+                    "CANCEL" => $"Se canceló {EntityType}",
+                    _ => Action
+                };
             }
         }
 
@@ -85,14 +71,6 @@ namespace desktop_app.Models
         {
             get
             {
-                if (Action == "UPDATE" || Action == "CANCEL")
-                {
-                    var diffs = GetDifferences();
-                    return diffs.Count > 0
-                        ? string.Join("\n", diffs)
-                        : "Sin cambios relevantes";
-                }
-
                 return SummaryText;
             }
         }
