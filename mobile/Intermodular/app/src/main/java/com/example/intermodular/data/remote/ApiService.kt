@@ -13,6 +13,7 @@ import com.example.intermodular.data.remote.dto.UpdateBookingDto
 import com.example.intermodular.data.remote.dto.UpdateUserRequestDto
 import com.example.intermodular.data.remote.dto.UpdateUserResponseDto
 import com.example.intermodular.data.remote.dto.UserDto
+import com.example.intermodular.data.remote.dto.AuditLogDto
 import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -60,6 +61,15 @@ interface ApiService {
      */
     @GET("booking/client/{id}")
     suspend fun getBookingsByUserId(@Path("id") id: String) : List<BookingDto>
+
+    /**
+     * Obtiene el historial de auditoría de un usuario
+     *
+     * @param id - ID del cliente
+     * @return [List<AuditLogDto>] - Lista de acciones auditadas
+     */
+    @GET("audit/client/{id}")
+    suspend fun getAuditLogsByUserId(@Path("id") id: String) : List<AuditLogDto>
 
 
     /**

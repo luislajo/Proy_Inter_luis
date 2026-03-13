@@ -1,7 +1,7 @@
 ﻿package com.example.intermodular.data.repository
 
 import com.example.intermodular.data.remote.ApiService
-import com.example.intermodular.data.remote.auth.SessionManager
+import com.example.intermodular.data.remote.dto.AuditLogDto
 import com.example.intermodular.data.remote.dto.CreateBookingDto
 import com.example.intermodular.data.remote.dto.UpdateBookingDto
 import com.example.intermodular.data.remote.mapper.toDomain
@@ -55,6 +55,18 @@ class BookingRepository(
     suspend fun getBookingsByUserId(id: String) : List<Booking> {
         return api.getBookingsByUserId(id)
             .map { it.toDomain() }
+    }
+
+    /**
+     * Obtiene el historial de auditoría de un usuario
+     *
+     * @param id - ID del cliente
+     * @return [List<AuditLogDto>] - Lista de acciones auditadas
+     * @throws retrofit2.HttpException - Si hay un error en la petición
+     * @throws IOException - Si hay error de red
+     */
+    suspend fun getAuditLogsByUserId(id: String): List<AuditLogDto> {
+        return api.getAuditLogsByUserId(id)
     }
 
 

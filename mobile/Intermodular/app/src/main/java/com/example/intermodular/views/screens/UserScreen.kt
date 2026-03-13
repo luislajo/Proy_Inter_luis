@@ -98,6 +98,7 @@ import java.time.format.DateTimeFormatter
 fun UserScreen(
     isLoading: Boolean,
     user: UserModel?,
+    auditLogs: List<String>,
     error: String?,
     onRetry: () -> Unit,
     onErrorShown: () -> Unit,
@@ -234,13 +235,51 @@ fun UserScreen(
 
                 Spacer(Modifier.height(22.dp))
 
-                // CTA para navegar a las reservas del usuario
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Button(onClick = onViewMyBookings) {
                         Text(text = "Ver mis reservas")
+                    }
+                }
+
+                if (auditLogs.isNotEmpty()) {
+                    ElevatedCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 32.dp),
+                        shape = RoundedCornerShape(22.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Historial de Actividad",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Divider()
+                            
+                            auditLogs.forEach { log ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Star,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = log,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -311,6 +350,7 @@ fun UserScreenState(
     UserScreen(
         isLoading = uiState.isLoading,
         user = uiState.user,
+        auditLogs = uiState.auditLogs,
         error = error,
         onRetry = { viewModel.refresh() },
         onErrorShown = { viewModel.clearError() },
