@@ -213,26 +213,7 @@ export async function createBooking(req, res) {
             timestamp: new Date()
         }).catch(err => console.error('Error al crear audit log:', err));
 
-        // Registro de auditoría para el pago de la habitación
-        auditLogModel.create({
-            entity_type: 'booking',
-            entity_id: bdBooking._id,
-            action: 'PAYMENT',
-            actor_id: req.user.id,
-            actor_type: req.user.rol,
-            previous_state: null,
-            new_state: {
-                totalPrice: bdBooking.totalPrice,
-                pricePerNight: bdBooking.pricePerNight,
-                offer: bdBooking.offer,
-                totalNights: bdBooking.totalNights,
-                payDate: bdBooking.payDate,
-                room: bdBooking.room,
-                client: bdBooking.client
-            },
-            timestamp: new Date()
-        }).catch(err => console.error('Error al crear audit log de pago:', err));
-
+        
         sendEmail(user.email, "Reserva confirmada", "newBooking", populated)
         return res.status(201).json(bdBooking)
     }
@@ -431,5 +412,58 @@ export async function deleteBooking(req, res) {
     catch (error) {
         console.error('Error al actualizar la reserva:', error);
         return res.status(500).json({ error: 'Error del servidor al eliminar la reserva' });
+    }
+}
+
+/**
+ * Registra el pago de una reserva en la auditoría
+ *
+ * @async
+ * @function payBooking
+ *
+ * @description
+ * Obtiene el ID de la reserva de los parámetros
+ * Registra en el log de auditoría el pago realizado
+ *
+ * @param {import('express').Response} res - Objeto de respuesta de Express.
+ *
+ * @returns {Promise} Respuesta HTTP
+ */
+export async function payBooking(req, res) {
+    try {
+        const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'No es un ID válido' });
+
+        const booking = await bookingDatabaseModel.findById(id);
+        if (!booking) return res.status(404).json({ error: 'No hay reserva con este ID' });
+
+        // Update payDate to current moment if needed
+        booking.payDate = new Date();
+        const bdBooking = await booking.save();
+
+        // Registro de auditoría para el pago de la habitación
+        auditLogModel.create({
+            entity_type: 'booking',
+            entity_id: bdBooking._id,
+            action: 'PAYMENT',
+            actor_id: req.user.id,
+            actor_type: req.user.rol,
+            previous_state: null, // Depending on requirements, previous state might be the unpaid booking
+            new_state: {
+                totalPrice: bdBooking.totalPrice,
+                pricePerNight: bdBooking.pricePerNight,
+                offer: bdBooking.offer,
+                totalNights: bdBooking.totalNights,
+                payDate: bdBooking.payDate,
+                room: bdBooking.room,
+                client: bdBooking.client
+            },
+            timestamp: new Date()
+        }).catch(err => console.error('Error al crear audit log de pago:', err));
+
+        return res.status(200).json({ status: 'Pago registrado correctamente y auditado', booking: bdBooking });
+    } catch (error) {
+        console.error('Error al procesar el pago de la reserva:', error);
+        return res.status(500).json({ error: 'Error del servidor al procesar el pago' });
     }
 }

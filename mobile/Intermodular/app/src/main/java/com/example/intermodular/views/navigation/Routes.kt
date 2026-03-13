@@ -43,6 +43,13 @@ sealed class Routes(
     }
 
     /**
+     * Pantalla de pago por pasarela simulada
+     */
+    object Payment : Routes("payment/{bookingId}") {
+        fun createRoute(bookingId: String) = "payment/$bookingId"
+    }
+
+    /**
      * Pantalla para crear una nueva reserva
      * @author Axel Zaragoci
      */

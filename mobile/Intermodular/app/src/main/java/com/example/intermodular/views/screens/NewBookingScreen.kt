@@ -25,7 +25,7 @@ import com.example.intermodular.models.Room
 import com.example.intermodular.viewmodels.MyBookingsViewModel
 import com.example.intermodular.viewmodels.NewBookingViewModel
 import com.example.intermodular.views.components.BookingDataForm
-import com.example.intermodular.views.components.PaymentPopup
+import androidx.compose.runtime.LaunchedEffect
 
 /**
  * Pantalla de crear nueva reserva
@@ -44,9 +44,8 @@ import com.example.intermodular.views.components.PaymentPopup
  * @param endDate - Fecha de fin seleccionada (en milisegundos)
  * @param totalPrice - Precio total calculado para la reserva
  * @param newBooking - Flag para saber si se ha creado la reserva
- * @param showPopup - Controla la visibilidad del popup de pago
- * @param popupMessage - Mensaje a mostrar en el popup
- * @param onPopupDismiss - Callback al cerrar el popup
+ * @param navigateToPayment - ID de la reserva a la que navegar para el pago
+ * @param onNavigateToPayment - Callback que ejecuta la navegación
  * @param onFormButtonClick - Callback al hacer clic en el botón del formulario (crear reserva)
  * @param onStartDateChange - Callback al cambiar la fecha de entrada
  * @param onEndDateChange - Callback al cambiar la fecha de salida
@@ -62,14 +61,18 @@ fun NewBookingScreen(
     endDate : Long?,
     totalPrice: Double?,
     newBooking: Boolean,
-    showPopup : Boolean,
-    popupMessage : String,
-    onPopupDismiss: () -> Unit,
+    navigateToPayment: String?,
+    onNavigateToPayment: (String) -> Unit,
     onFormButtonClick: () -> Unit,
     onStartDateChange: (Long?) -> Unit,
     onEndDateChange: (Long?) -> Unit,
     onGuestsChange: (String) -> Unit
 ) {
+    LaunchedEffect(navigateToPayment) {
+        navigateToPayment?.let {
+            onNavigateToPayment(it)
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -151,11 +154,6 @@ fun NewBookingScreen(
             )
         }
 
-        PaymentPopup(
-            show = showPopup,
-            message = popupMessage,
-            onDismiss = onPopupDismiss
-        )
     }
 }
 
@@ -170,7 +168,8 @@ fun NewBookingScreen(
  */
 @Composable
 fun NewBookingState(
-    viewModel: NewBookingViewModel
+    viewModel: NewBookingViewModel,
+    onNavigateToPayment: (String) -> Unit
 ) {
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -180,8 +179,7 @@ fun NewBookingState(
     val selectedEndDate by viewModel.EndDate.collectAsStateWithLifecycle()
     val totalPrice by viewModel.totalPrice.collectAsStateWithLifecycle()
     val newBooking by viewModel.bookingCreated.collectAsStateWithLifecycle()
-    val showPopup by viewModel.showPopup.collectAsStateWithLifecycle()
-    val popupMessage by viewModel.popupMessage.collectAsStateWithLifecycle()
+    val navigateToPayment by viewModel.navigateToPayment.collectAsStateWithLifecycle()
     val room by viewModel.Room.collectAsStateWithLifecycle()
 
     NewBookingScreen(
@@ -193,9 +191,11 @@ fun NewBookingState(
         endDate = selectedEndDate,
         totalPrice = totalPrice,
         newBooking = newBooking,
-        showPopup = showPopup,
-        popupMessage = popupMessage,
-        onPopupDismiss = {},
+        navigateToPayment = navigateToPayment,
+        onNavigateToPayment = { 
+            viewModel.onPaymentNavigated()
+            onNavigateToPayment(it) 
+        },
         onFormButtonClick = viewModel::createBooking,
         onStartDateChange = viewModel::onStartDateChange,
         onEndDateChange = viewModel::onEndDateChange,

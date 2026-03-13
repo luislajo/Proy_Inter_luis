@@ -193,6 +193,30 @@
         </Style.Triggers>
     </Style>
     
+    <Style x:Key="AuditActionStyle" TargetType="Border">
+        <Setter Property="Background" Value="#6c757d"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Action}" Value="CREATE">
+                <Setter Property="Background" Value="#28a745"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="PAYMENT">
+                <Setter Property="Background" Value="#28a745"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="UPDATE">
+                <Setter Property="Background" Value="#ffc107"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="DELETE">
+                <Setter Property="Background" Value="#dc3545"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="CANCEL">
+                <Setter Property="Background" Value="#dc3545"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    
     <Style x:Key="TableHeader" TargetType="GridViewColumnHeader">
         <Setter Property="Background" Value="#f1f7fc"/>
         <Setter Property="BorderThickness" Value="0 "/>

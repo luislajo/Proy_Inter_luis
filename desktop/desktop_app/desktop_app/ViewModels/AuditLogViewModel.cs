@@ -7,6 +7,7 @@ using System.Windows.Input;
 using desktop_app.Commands;
 using desktop_app.Models;
 using desktop_app.Services;
+using desktop_app.Views;
 
 namespace desktop_app.ViewModels
 {
@@ -21,18 +22,32 @@ namespace desktop_app.ViewModels
         // Lo que la vista muestra
         public ObservableCollection<AuditLogModel> Logs { get; } = new();
 
-        // Opciones del combo de filtro
+        // Opciones del combo de filtro de acción
         public ObservableCollection<string> FilterOptions { get; } = new()
         {
             "Todos", "CREATE", "UPDATE", "CANCEL", "DELETE", "PAYMENT"
         };
 
-        // Filtro seleccionado
+        // Filtro seleccionado de acción
         private string _selectedFilter = "Todos";
         public string SelectedFilter
         {
             get => _selectedFilter;
             set => SetProperty(ref _selectedFilter, value);
+        }
+
+        // Opciones del combo de filtro de colección
+        public ObservableCollection<string> FilterCollectionOptions { get; } = new()
+        {
+            "Todas", "Room", "Booking"
+        };
+
+        // Filtro seleccionado de colección
+        private string _selectedCollectionFilter = "Todas";
+        public string SelectedCollectionFilter
+        {
+            get => _selectedCollectionFilter;
+            set => SetProperty(ref _selectedCollectionFilter, value);
         }
 
         // Indicador de carga
@@ -97,10 +112,21 @@ namespace desktop_app.ViewModels
         {
             Logs.Clear();
 
-            var filtered = string.IsNullOrEmpty(_selectedFilter) || _selectedFilter == "Todos"
-                ? _allLogs
-                : _allLogs.Where(l => l.Action != null &&
+            var filtered = _allLogs.AsEnumerable();
+
+            // Filtro por acción
+            if (!string.IsNullOrEmpty(_selectedFilter) && _selectedFilter != "Todos")
+            {
+                filtered = filtered.Where(l => l.Action != null &&
                     l.Action.Equals(_selectedFilter, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Filtro por colección
+            if (!string.IsNullOrEmpty(_selectedCollectionFilter) && _selectedCollectionFilter != "Todas")
+            {
+                filtered = filtered.Where(l => l.EntityType != null &&
+                    l.EntityType.Equals(_selectedCollectionFilter, StringComparison.OrdinalIgnoreCase));
+            }
 
             foreach (var log in filtered)
                 Logs.Add(log);
@@ -111,6 +137,7 @@ namespace desktop_app.ViewModels
         private void ClearFilters()
         {
             SelectedFilter = "Todos";
+            SelectedCollectionFilter = "Todas";
             ApplyFilter();
         }
     }

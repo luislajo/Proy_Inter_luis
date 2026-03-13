@@ -93,6 +93,17 @@ class BookingRepository(
 
 
     /**
+     * Registra el pago en la auditoría
+     *
+     * @param bookingId - ID de la reserva a registrar el pago
+     * @return [Booking] - Objeto del dominio de la reserva actualizada
+     */
+    suspend fun payBooking(bookingId: String): Booking {
+        return api.payBooking(bookingId).toDomain()
+    }
+
+
+    /**
      * Cancela una reserva existente
      *
      * @param bookingId - ID de la reserva a cancelar

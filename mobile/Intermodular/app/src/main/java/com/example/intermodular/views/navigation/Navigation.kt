@@ -39,8 +39,11 @@ import com.example.intermodular.viewmodels.viewModelFacotry.NewBookingViewModelF
 import com.example.intermodular.viewmodels.viewModelFacotry.RoomViewModelFactory
 import com.example.intermodular.viewmodels.viewModelFacotry.RoomDetailViewModelFactory
 import com.example.intermodular.viewmodels.viewModelFactory.UserViewModelFactory
+import com.example.intermodular.viewmodels.PaymentViewModel
+import com.example.intermodular.viewmodels.viewModelFacotry.PaymentViewModelFactory
 import com.example.intermodular.views.screens.MyBookingDetailsState
 import com.example.intermodular.views.screens.NewBookingState
+import com.example.intermodular.views.screens.PaymentState
 import com.example.intermodular.views.screens.RoomDetailScreen
 import com.example.intermodular.views.screens.UpdateProfileScreenState
 import com.example.intermodular.views.screens.UserScreenState
@@ -231,7 +234,14 @@ fun Navigation(
                 factory = NewBookingViewModelFactory(bookingRepository, roomRepository, roomId, startDate!!, endDate!!, guests)
             )
 
-            NewBookingState(viewModel)
+            NewBookingState(
+                viewModel = viewModel,
+                onNavigateToPayment = { bookingId ->
+                    navigationController.navigate(Routes.Payment.createRoute(bookingId)) {
+                        popUpTo(Routes.Bookings.route) // Opcional, para limpiar la pila de pantallas si se desea
+                    }
+                }
+            )
         }
 
         /**
@@ -268,9 +278,41 @@ fun Navigation(
                 )
             )
 
-            MyBookingDetailsState(viewModel)
+            MyBookingDetailsState(
+                viewModel = viewModel,
+                onNavigateToPayment = { id ->
+                    navigationController.navigate(Routes.Payment.createRoute(id))
+                }
+            )
         }
         
+        /**
+         * Pantalla de pago interactivo post-reserva/modificación
+         */
+        composable(
+            route = Routes.Payment.route,
+            arguments = listOf(
+                navArgument("bookingId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val bookingId = backStackEntry.arguments?.getString("bookingId")!!
+            val api = RetrofitProvider.api
+            val bookingRepository = BookingRepository(api)
+            
+            val viewModel: PaymentViewModel = viewModel(
+                factory = PaymentViewModelFactory(bookingRepository, bookingId)
+            )
+            
+            PaymentState(
+                viewModel = viewModel,
+                onNavigateNext = {
+                    navigationController.navigate(Routes.MyBookings.route) {
+                        popUpTo(Routes.Bookings.route)
+                    }
+                }
+            )
+        }
+
         composable(
             route = Routes.RoomDetail.route,
             arguments = listOf(
