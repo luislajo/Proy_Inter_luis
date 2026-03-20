@@ -66,6 +66,33 @@ const bookingDatabaseSchema = new Schema({
     totalNights: {
         type: Number,
         required: true
+    },
+    invoice_number: {
+        type: String,
+        default: null
+    },
+    invoiceDate: {
+        type: Date,
+        default: null
+    },
+    invoiceCompany: {
+        name: { type: String, default: null },
+        taxId: { type: String, default: null },
+        address: { type: String, default: null }
+    },
+    invoiceBreakdown: {
+        nightsSubtotal: { type: Number, default: null },
+        extrasSubtotal: { type: Number, default: 0 },
+        discountAmount: { type: Number, default: 0 },
+        taxRate: { type: Number, default: 21 },
+        taxAmount: { type: Number, default: null },
+        total: { type: Number, default: null },
+        extras: [{
+            name: { type: String, required: true },
+            quantity: { type: Number, default: 1 },
+            unitPrice: { type: Number, required: true },
+            total: { type: Number, required: true }
+        }]
     }
 }, {
     toJSON: {
