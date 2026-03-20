@@ -15,6 +15,7 @@ import authRouter from "./routers/authRouter.js";
 import photoRouter from "./lib/image/imageRouter.js";
 import reviewsRouter from "./routers/reviewsRouter.js";
 import auditRouter from "./routers/auditRouter.js";
+import invoicesRouter from "./routers/invoicesRouter.js";
 dotenv.config();
 connectDB()
 connectEmail();
@@ -36,12 +37,14 @@ const UPLOADS_DIR = path.join(__dirname, "../uploads");
 app.use("/uploads", express.static(UPLOADS_DIR));
 
 app.use("/booking", bookingRouter);
+app.use("/bookings", bookingRouter);
 app.use("/room", roomsRouter);
 app.use("/user", usersRouter);
 app.use("/auth", authRouter);
 app.use("/image", photoRouter);
 app.use("/review", reviewsRouter);
 app.use("/audit", auditRouter);
+app.use("/invoices", invoicesRouter);
 
 app.listen(PORT, () => {
   console.log(`Servidor en el puerto ${PORT}`);

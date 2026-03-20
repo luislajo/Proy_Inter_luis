@@ -145,9 +145,6 @@ export const updateRoom = async (req, res) => {
   try {
     const { roomID } = req.params;
 
-    // Guardar estado anterior antes de actualizar
-    const previousDoc = await roomDatabaseModel.findById(roomID).lean();
-
     const update = {};
 
     // Log payload for debugging
@@ -200,18 +197,6 @@ export const updateRoom = async (req, res) => {
 
     if (!updated) return res.status(404).json({ message: "Room no encontrada" });
 
-    // Registro de auditoría para la actualización
-    auditLogModel.create({
-      entity_type: 'room',
-      entity_id: updated._id,
-      action: 'UPDATE',
-      actor_id: req.user.id,
-      actor_type: req.user.rol,
-      previous_state: previousDoc,
-      new_state: updated.toJSON(),
-      timestamp: new Date()
-    }).catch(err => console.error('Error al crear audit log:', err));
-
     return res.status(200).json(updated);
   } catch (err) {
     if (err?.code === 11000) return res.status(409).json({ message: "roomNumber ya existe" });
@@ -237,9 +222,6 @@ export const deleteRoom = async (req, res) => {
   try {
     const { roomID } = req.params;
 
-    // Guardar estado anterior antes de eliminar
-    const previousDoc = await roomDatabaseModel.findById(roomID).lean();
-
     // Primero eliminar todas las reservas de esta habitación
     const { bookingDatabaseModel } = await import("../models/bookingModel.js");
     await bookingDatabaseModel.deleteMany({ room: roomID });
@@ -247,18 +229,6 @@ export const deleteRoom = async (req, res) => {
     const deleted = await roomDatabaseModel.findByIdAndDelete(roomID);
 
     if (!deleted) return res.status(404).json({ message: "Room no encontrada" });
-
-    // Registro de auditoría para la eliminación
-    auditLogModel.create({
-      entity_type: 'room',
-      entity_id: roomID,
-      action: 'DELETE',
-      actor_id: req.user.id,
-      actor_type: req.user.rol,
-      previous_state: previousDoc,
-      new_state: null,
-      timestamp: new Date()
-    }).catch(err => console.error('Error al crear audit log:', err));
 
     return res.status(200).json({ message: "Room eliminada", deleted });
   } catch (err) {
