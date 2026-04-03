@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="desktop_app.Views.FormBookingView"
+<UserControl x:Class="desktop_app.Views.FormBookingView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -33,10 +33,18 @@
             </StackPanel>
         </Border>
         
-        <StackPanel Grid.Column="0" Grid.Row="1" Style="{StaticResource BtnWrapper}">
+        <StackPanel Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource BtnWrapper}">
             <Button Content="Volver" Style="{StaticResource RedReturnBtn}" Command="{Binding ReturnCommand}"/>
             <Button Content="Guardar" Style="{StaticResource SaveBtn}" Command="{Binding SaveCommand}"/>
             <Button Content="Cancelar" Style="{StaticResource CancelBtn}" Command="{Binding CancelCommand}" IsEnabled="{Binding Disabled}"/>
+            <Button Content="Checkout y pagar"
+                    Style="{StaticResource SaveBtn}"
+                    Command="{Binding CheckoutPayCommand}"
+                    IsEnabled="{Binding Disabled}"/>
+            <Button Content="Descargar factura"
+                    Style="{StaticResource SaveBtn}"
+                    Command="{Binding DownloadInvoiceCommand}"
+                    IsEnabled="{Binding Disabled}"/>
         </StackPanel>
         
         <Grid Grid.Column="0" Grid.Row="2" Margin="0 15 15 0" HorizontalAlignment="Stretch">

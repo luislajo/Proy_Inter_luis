@@ -1,5 +1,6 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.IO;
 using desktop_app.Models;
 using Newtonsoft.Json;
 
@@ -7,6 +8,12 @@ namespace desktop_app.Services
 {
     public static class BookingService
     {
+        public class PayBookingResponse
+        {
+            public string? status { get; set; }
+            public BookingModel? booking { get; set; }
+        }
+
         /// <summary>
         /// Obtiene las reservas de la API
         /// </summary>
@@ -43,6 +50,47 @@ namespace desktop_app.Services
                 ).IsSuccessStatusCode;
         }
 
+        public static async Task DownloadInvoicePdfAsync(string bookingId, string filePath)
+        {
+            var url = $"{ApiService.BaseUrl}booking/{bookingId}/invoice";
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Accept.Clear();
+            request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/pdf"));
+
+            using var response = await ApiService._httpClient.SendAsync(request);
+            await HandleError(response);
+
+            var bytes = await response.Content.ReadAsByteArrayAsync();
+            await File.WriteAllBytesAsync(filePath, bytes);
+        }
+
+        /// <summary>
+        /// Registra un "pago" para una reserva y genera la factura (invoice_number).
+        /// </summary>
+        public static async Task<BookingModel?> PayBookingAsync(string bookingId)
+        {
+            // El backend puede calcular el desglose con extras/discount/tax si se le envían.
+            // Para la emulación, enviamos extras vacíos y 0 de descuento.
+            var payload = new
+            {
+                extras = new object[] { },
+                discountAmount = 0,
+                taxRate = 21,
+                company = new
+                {
+                    name = (string?)null,
+                    taxId = (string?)null,
+                    address = (string?)null
+                }
+            };
+
+            var response = await CreateResponse($"{bookingId}/pay", payload, HttpMethod.Post);
+            var data = await response.Content.ReadFromJsonAsync<PayBookingResponse>();
+            return data?.booking;
+        }
+
+        
         
         /// <summary>
         /// Actualiza una reserva

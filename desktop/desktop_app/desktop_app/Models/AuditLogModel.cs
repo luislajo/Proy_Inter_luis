@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Collections.Generic;
 
 namespace desktop_app.Models
 {
@@ -41,10 +41,17 @@ namespace desktop_app.Models
         [JsonPropertyName("__v")]
         public int Version { get; set; }
 
-        // ── Propiedades calculadas para la UI ──
+      
+        [JsonIgnore]
+        private List<string> _cachedDiffs;
+
+        [JsonIgnore]
+        private List<string> CachedDiffs => _cachedDiffs ??= GetDifferences();
+
+    
 
         /// <summary>
-        /// Texto visible en la columna "Resumen"
+        /// Texto visible en la columna resumen
         /// </summary>
         [JsonIgnore]
         public string SummaryText
@@ -56,21 +63,33 @@ namespace desktop_app.Models
                     "CREATE" => $"Se creó {EntityType}",
                     "DELETE" => $"Se eliminó {EntityType}",
                     "PAYMENT" => "Pago recibido",
-                    "UPDATE" => $"Se modificó {EntityType}",
+                    "UPDATE" => GetUpdateSummary(),
                     "CANCEL" => $"Se canceló {EntityType}",
                     _ => Action
                 };
             }
         }
 
+        private string GetUpdateSummary()
+        {
+            var count = CachedDiffs.Count;
+            if (count == 0)
+                return $"Se modificó {EntityType}";
+            if (count == 1)
+                return $"{EntityType} 1 cambio";
+            return $"{EntityType} {count} cambios";
+        }
+
         /// <summary>
-        /// Texto a mostrar en el Tooltip al poner el ratón encima
+        /// Texto a mostrar en el Tooltip al poner el ratón encima en UPDATE muestra el detalle de cambios
         /// </summary>
         [JsonIgnore]
         public string TooltipText
         {
             get
             {
+                if (string.Equals(Action, "UPDATE", StringComparison.OrdinalIgnoreCase) && CachedDiffs.Count > 0)
+                    return string.Join(Environment.NewLine, CachedDiffs);
                 return SummaryText;
             }
         }

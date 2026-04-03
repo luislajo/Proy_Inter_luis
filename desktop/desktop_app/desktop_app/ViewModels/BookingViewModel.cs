@@ -1,4 +1,6 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using desktop_app.Commands;
@@ -15,6 +17,41 @@ namespace desktop_app.ViewModels
         /// Colección de las reservas que se conecta a la tabla de View
         /// </summary>
         public ObservableCollection<BookingModel> Bookings { get; }
+        private readonly List<BookingModel> _allBookings = new();
+
+        public ObservableCollection<InvoiceModel> Invoices { get; } = new();
+
+        // Filtros de reservas
+        private string _filterClientText = string.Empty;
+        public string FilterClientText
+        {
+            get => _filterClientText;
+            set { _filterClientText = value; OnPropertyChanged(); }
+        }
+
+        private string _filterStatus = "Todas";
+        public string FilterStatus
+        {
+            get => _filterStatus;
+            set { _filterStatus = value; OnPropertyChanged(); }
+        }
+
+        public IReadOnlyList<string> BookingStatusOptions { get; } = new List<string> { "Todas", "Abierta", "Cancelada" };
+
+
+        private DateTime? _filterFromDate;
+        public DateTime? FilterFromDate
+        {
+            get => _filterFromDate;
+            set { _filterFromDate = value; OnPropertyChanged(); }
+        }
+
+        private DateTime? _filterToDate;
+        public DateTime? FilterToDate
+        {
+            get => _filterToDate;
+            set { _filterToDate = value; OnPropertyChanged(); }
+        }
         
         
         /// <summary>
@@ -39,6 +76,33 @@ namespace desktop_app.ViewModels
         /// Comando para el botón de recargar
         /// </summary>
         public ICommand ReloadBookingCommand { get; }
+
+        public ICommand SearchBookingsCommand { get; }
+
+        public ICommand ClearBookingFiltersCommand { get; }
+
+        public ICommand LoadInvoicesCommand { get; }
+
+        public ICommand DownloadInvoiceRowCommand { get; }
+
+
+        private string _invoiceDocumentFilter = string.Empty;
+        public string InvoiceDocumentFilter
+        {
+            get => _invoiceDocumentFilter;
+            set
+            {
+                _invoiceDocumentFilter = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string _invoiceStatusText = "Pulsa Buscar para cargar facturas.";
+        public string InvoiceStatusText
+        {
+            get => _invoiceStatusText;
+            set => SetProperty(ref _invoiceStatusText, value);
+        }
         
         /// <summary>
         /// Constructor del ViewModel
@@ -55,6 +119,10 @@ namespace desktop_app.ViewModels
             EditBookingCommand = new RelayCommand(EditBooking);
             CreateBookingCommand = new RelayCommand(CreateBooking);
             ReloadBookingCommand = new AsyncRelayCommand(LoadBookingsAsync);
+            SearchBookingsCommand = new RelayCommand(_ => ApplyBookingFilters());
+            ClearBookingFiltersCommand = new RelayCommand(_ => ClearBookingFilters());
+            LoadInvoicesCommand = new AsyncRelayCommand(LoadInvoicesAsync);
+            DownloadInvoiceRowCommand = new AsyncRelayCommand<InvoiceModel>(DownloadInvoiceRowAsync);
             BookingEvents.OnBookingChanged += async () => await LoadBookingsAsync();
         }
 
@@ -70,7 +138,7 @@ namespace desktop_app.ViewModels
             try
             {
                 var list = await BookingService.GetAllBookingsAsync();
-                Bookings.Clear();
+                _allBookings.Clear();
                 foreach (var booking in list)
                 {
                     UserModel u = await UserService.GetClientByIdAsync(booking.Client);
@@ -78,8 +146,10 @@ namespace desktop_app.ViewModels
                     booking.ClientName = u.FirstName + " " + u.LastName;
                     RoomModel? room = await RoomService.GetRoomByIdAsync(booking.Room);
                     booking.RoomNumber = room != null ? room.RoomNumber : "Error";
-                    Bookings.Add(booking);
+                    _allBookings.Add(booking);
                 }
+
+                ApplyBookingFilters();
             }
             catch (Exception ex)
             {
@@ -110,6 +180,7 @@ namespace desktop_app.ViewModels
                 if (deleted)
                 {
                     Bookings.Remove(booking);
+                    _allBookings.RemoveAll(b => b.Id == booking.Id);
                 }
                 else
                 {
@@ -150,5 +221,122 @@ namespace desktop_app.ViewModels
             NavigationService.Instance.NavigateTo<FormBookingView>();
             FormBookingViewModel.Instance.Booking = new BookingModel();
         }
+
+        private void ClearBookingFilters()
+        {
+            FilterClientText = string.Empty;
+            FilterStatus = "Todas";
+            FilterFromDate = null;
+            FilterToDate = null;
+            ApplyBookingFilters();
+        }
+
+        private void ApplyBookingFilters()
+        {
+            IEnumerable<BookingModel> filtered = _allBookings;
+
+            if (!string.IsNullOrWhiteSpace(FilterClientText))
+            {
+                var needle = FilterClientText.Trim();
+                filtered = filtered.Where(b =>
+                    (!string.IsNullOrWhiteSpace(b.ClientName) && b.ClientName.Contains(needle, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrWhiteSpace(b.ClientDni) && b.ClientDni.Contains(needle, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            if (!string.Equals(FilterStatus, "Todas", StringComparison.OrdinalIgnoreCase))
+            {
+                filtered = filtered.Where(b => string.Equals(b.Status, FilterStatus, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (FilterFromDate.HasValue)
+            {
+                var from = FilterFromDate.Value.Date;
+                filtered = filtered.Where(b => b.CheckInDate.Date >= from);
+            }
+
+            if (FilterToDate.HasValue)
+            {
+                var to = FilterToDate.Value.Date;
+                filtered = filtered.Where(b => b.CheckInDate.Date <= to);
+            }
+
+            Bookings.Clear();
+            foreach (var booking in filtered.OrderByDescending(b => b.CheckInDate))
+            {
+                Bookings.Add(booking);
+            }
+        }
+
+        private async Task LoadInvoicesAsync()
+        {
+            try
+            {
+                InvoiceStatusText = "Cargando facturas...";
+                Invoices.Clear();
+
+                var filter = string.IsNullOrWhiteSpace(InvoiceDocumentFilter)
+                    ? null
+                    : InvoiceDocumentFilter.Trim();
+                var items = await InvoiceService.GetInvoicesAsync(filter);
+                var clientCache = new Dictionary<string, UserModel>();
+                foreach (var inv in items)
+                {
+                    await EnrichInvoiceClientAsync(inv, clientCache);
+                    Invoices.Add(inv);
+                }
+
+                InvoiceStatusText = Invoices.Count == 0
+                    ? (filter == null
+                        ? "No hay facturas en la base de datos."
+                        : "Sin facturas para ese DNI/NIE.")
+                    : $"{Invoices.Count} factura(s) encontradas.";
+            }
+            catch (Exception ex)
+            {
+                InvoiceStatusText = "Error al cargar facturas.";
+                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private static async Task EnrichInvoiceClientAsync(InvoiceModel inv, Dictionary<string, UserModel> cache)
+        {
+            if (string.IsNullOrWhiteSpace(inv.ClientId)) return;
+
+            if (!cache.TryGetValue(inv.ClientId, out var user))
+            {
+                user = await UserService.GetClientByIdAsync(inv.ClientId);
+                cache[inv.ClientId] = user;
+            }
+
+            inv.ClientDni = user.Dni ?? string.Empty;
+            inv.ClientName = $"{user.FirstName} {user.LastName}".Trim();
+        }
+
+        private async Task DownloadInvoiceRowAsync(InvoiceModel invoice)
+        {
+            if (string.IsNullOrWhiteSpace(invoice.Id))
+                return;
+
+            try
+            {
+                var tempPath = System.IO.Path.Combine(
+                    System.IO.Path.GetTempPath(),
+                    $"factura_{invoice.Id}.pdf");
+
+                await BookingService.DownloadInvoicePdfAsync(invoice.Id, tempPath);
+
+                var psi = new System.Diagnostics.ProcessStartInfo(tempPath)
+                {
+                    UseShellExecute = true
+                };
+                System.Diagnostics.Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error al descargar la factura",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
     }
 }

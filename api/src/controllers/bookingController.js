@@ -645,18 +645,76 @@ export async function getBookingInvoicePdf(req, res) {
     }
 }
 
+function escapeRegex(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Historial de facturas:
+ * - Usuario: solo las suyas (ignora filtros de query).
+ * - Admin/Trabajador: sin query → todas las facturas con número;
+ *   ?userId= → por id de cliente; ?dni= → por DNI/NIE (campo dni en users).
+ */
 export async function getInvoicesByUserId(req, res) {
     try {
-        const { userId } = req.query;
-        if (!userId) return res.status(400).json({ error: "Se requiere userId" });
-        if (!mongoose.isValidObjectId(userId)) return res.status(400).json({ error: "userId no válido" });
+        const role = req.user?.rol;
+        const isStaff = role === "Admin" || role === "Trabajador";
 
-        if (req.user.rol === "Usuario" && String(req.user.id) !== String(userId)) {
-            return res.status(403).json({ error: "No autorizado para consultar este historial" });
+        const baseQuery = () =>
+            bookingDatabaseModel
+                .find({ invoice_number: { $ne: null } })
+                .sort({ invoiceDate: -1, payDate: -1 })
+                .select("_id room client checkInDate checkOutDate totalNights totalPrice invoice_number invoiceDate invoiceBreakdown status")
+                .lean();
+
+        if (role === "Usuario") {
+            const invoices = await bookingDatabaseModel
+                .find({ client: req.user.id, invoice_number: { $ne: null } })
+                .sort({ invoiceDate: -1, payDate: -1 })
+                .select("_id room client checkInDate checkOutDate totalNights totalPrice invoice_number invoiceDate invoiceBreakdown status")
+                .lean();
+            return res.status(200).json({
+                total: invoices.length,
+                invoices
+            });
+        }
+
+        if (!isStaff) {
+            return res.status(403).json({ error: "No autorizado" });
+        }
+
+        const userIdRaw = req.query.userId;
+        const dniRaw = typeof req.query.dni === "string" ? req.query.dni.trim() : "";
+        const hasUserId = userIdRaw != null && String(userIdRaw).trim().length > 0;
+        const hasDni = dniRaw.length > 0;
+
+        if (!hasUserId && !hasDni) {
+            const invoices = await baseQuery();
+            return res.status(200).json({
+                total: invoices.length,
+                invoices
+            });
+        }
+
+        let clientId = null;
+        if (hasUserId) {
+            const userId = String(userIdRaw).trim();
+            if (!mongoose.isValidObjectId(userId)) {
+                return res.status(400).json({ error: "userId no válido" });
+            }
+            clientId = userId;
+        } else {
+            const user = await userDatabaseModel.findOne({
+                dni: new RegExp(`^${escapeRegex(dniRaw)}$`, "i")
+            }).lean();
+            if (!user) {
+                return res.status(404).json({ error: "Usuario no encontrado con ese DNI/NIE" });
+            }
+            clientId = user._id;
         }
 
         const invoices = await bookingDatabaseModel
-            .find({ client: userId, invoice_number: { $ne: null } })
+            .find({ client: clientId, invoice_number: { $ne: null } })
             .sort({ invoiceDate: -1, payDate: -1 })
             .select("_id room client checkInDate checkOutDate totalNights totalPrice invoice_number invoiceDate invoiceBreakdown status")
             .lean();

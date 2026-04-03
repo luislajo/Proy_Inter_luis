@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
     
 namespace desktop_app.Models
 {
@@ -66,7 +66,7 @@ namespace desktop_app.Models
                 TotalNights = TotalNights,
                 RoomNumber = RoomNumber,
                 ClientName = ClientName,
-                ClientDni = ClientDni
+                ClientDni = ClientDni,
             };
         }
 

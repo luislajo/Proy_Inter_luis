@@ -250,6 +250,7 @@ fun MyBookingDetailsScreen(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
+                    }
                 }
             }
         }

@@ -97,14 +97,15 @@
                    HorizontalAlignment="Center" VerticalAlignment="Top"
                    Margin="0,10,0,0" Foreground="#6B7280" FontSize="14"/>
 
-        <!-- ===== TABLA (ListView + GridView) ===== -->
+        <!-- ===== TABLA (scroll solo aquí; altura máxima para no expandir la ventana) ===== -->
         <ListView Grid.Row="2" 
                   ItemsSource="{Binding Logs}" 
                   SizeChanged="ListView_SizeChanged"
                   AlternationCount="2" 
                   ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}" 
                   Margin="0,5,0,0" 
-                  BorderThickness="0.5">
+                  BorderThickness="0.5"
+                  MaxHeight="480">
             <ListView.View>
                 <GridView>
                     <!-- Fecha -->

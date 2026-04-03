@@ -1,4 +1,4 @@
-﻿<Window x:Class="desktop_app.MainWindow"
+<Window x:Class="desktop_app.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -26,26 +26,33 @@
 
             <Button Command="{Binding ShowUsersCommand}" Style="{StaticResource SideBarButton}">
                 <StackPanel Orientation="Horizontal">
-                    <Image Source="/Resources/Images/bookingIcon.png" Style="{StaticResource SideBarIcon}"/>
-                    <TextBlock>Clientes</TextBlock>
+                    <TextBlock Text="group" Style="{StaticResource SideBarFontIcon}"/>
+                    <TextBlock VerticalAlignment="Center">Clientes</TextBlock>
                 </StackPanel>
             </Button>
             <Button Command="{Binding ShowBookingsCommand}" Style="{StaticResource SideBarButton}">
                 <StackPanel Orientation="Horizontal">
-                    <Image Source="/Resources/Images/userIcon.png" Style="{StaticResource SideBarIcon}"/>
-                    <TextBlock>Reservas</TextBlock>
+                    <TextBlock Text="event_note" Style="{StaticResource SideBarFontIcon}"/>
+                    <TextBlock VerticalAlignment="Center">Reservas</TextBlock>
                 </StackPanel>
             </Button>
             <Button Command="{Binding ShowRoomsCommand}" Style="{StaticResource SideBarButton}">
                 <StackPanel Orientation="Horizontal">
-                    <Image Source="/Resources/Images/roomIcon.png" Style="{StaticResource SideBarIcon}"/>
-                    <TextBlock>Habitaciones</TextBlock>
+                    <TextBlock Text="bed" Style="{StaticResource SideBarFontIcon}"/>
+                    <TextBlock VerticalAlignment="Center">Habitaciones</TextBlock>
                 </StackPanel>
             </Button>
             <Button Command="{Binding ShowAuditCommand}" Style="{StaticResource SideBarButton}">
                 <StackPanel Orientation="Horizontal">
-                    <Image Source="/Resources/Images/bookingIcon.png" Style="{StaticResource SideBarIcon}"/>
-                    <TextBlock>Historial</TextBlock>
+                    <TextBlock Text="history" Style="{StaticResource SideBarFontIcon}"/>
+                    <TextBlock VerticalAlignment="Center">Historial</TextBlock>
+                </StackPanel>
+            </Button>
+
+            <Button Command="{Binding LogoutCommand}" Style="{StaticResource SideBarButton}" Margin="0,40,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="logout" Style="{StaticResource SideBarFontIcon}"/>
+                    <TextBlock VerticalAlignment="Center">Cerrar sesión</TextBlock>
                 </StackPanel>
             </Button>
         </StackPanel>

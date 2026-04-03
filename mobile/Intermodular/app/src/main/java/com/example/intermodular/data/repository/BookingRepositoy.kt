@@ -1,6 +1,7 @@
 ﻿package com.example.intermodular.data.repository
 
 import com.example.intermodular.data.remote.ApiService
+import com.example.intermodular.data.remote.auth.SessionManager
 import com.example.intermodular.data.remote.dto.AuditLogDto
 import com.example.intermodular.data.remote.dto.CreateBookingDto
 import com.example.intermodular.data.remote.dto.UpdateBookingDto
