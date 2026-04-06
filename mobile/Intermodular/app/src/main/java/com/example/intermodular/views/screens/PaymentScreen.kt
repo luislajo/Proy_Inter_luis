@@ -76,7 +76,7 @@ fun PaymentScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Tu reserva ya ha sudo confirmada. Presiona Pagar para completar la transacción final.",
+                text = "Tu reserva ya ha sido confirmada. Pulsa Pagar para completar la transacción.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

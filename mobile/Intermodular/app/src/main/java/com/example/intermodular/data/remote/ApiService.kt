@@ -10,6 +10,7 @@ import com.example.intermodular.data.remote.dto.RoomDto
 import com.example.intermodular.data.remote.dto.ReviewDto
 import com.example.intermodular.data.remote.dto.RoomsResponseDto
 import com.example.intermodular.data.remote.dto.UpdateBookingDto
+import com.example.intermodular.data.remote.dto.PayBookingResponseDto
 import com.example.intermodular.data.remote.dto.UpdateUserRequestDto
 import com.example.intermodular.data.remote.dto.UpdateUserResponseDto
 import com.example.intermodular.data.remote.dto.UserDto
@@ -90,12 +91,12 @@ interface ApiService {
      * @author Luis Lajo
      *
      * @param id - ID de la reserva a pagar
-     * @return [BookingDto] - Objeto con la información de la reserva actualizada
+     * @return [PayBookingResponseDto] - Mensaje y reserva actualizada en [PayBookingResponseDto.booking]
      */
     @POST("booking/{id}/pay")
     suspend fun payBooking(
         @Path("id") id: String
-    ): BookingDto
+    ): PayBookingResponseDto
 
 
     /**

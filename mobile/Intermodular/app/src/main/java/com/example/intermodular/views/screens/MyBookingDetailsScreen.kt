@@ -55,7 +55,7 @@ import androidx.compose.runtime.LaunchedEffect
  * @param loading - Estado de carga de datos
  * @param error - Mensaje de error a mostrar (null si no hay error)
  * @param room - Habitación asociada a la reserva
- * @param status - Estado actual de la reserva ("Abierta", "Cancelada")
+ * @param status - Estado actual de la reserva ("Abierta", "Finalizada", "Cancelada")
  * @param booking - Datos completos de la reserva
  * @param startDate - Fecha de inicio seleccionada (en milisegundos)
  * @param endDate - Fecha de fin seleccionada (en milisegundos)

@@ -65,29 +65,36 @@ namespace desktop_app.Services
             await File.WriteAllBytesAsync(filePath, bytes);
         }
 
+        /// <summary>Obtiene una reserva por id (incluye invoice_number, invoiceIssuer si existen).</summary>
+        public static async Task<BookingModel?> GetBookingByIdAsync(string bookingId)
+        {
+            string url = $"{ApiService.BaseUrl}booking/{bookingId}";
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var response = await ApiService._httpClient.SendAsync(request);
+            await HandleError(response);
+            var booking = await response.Content.ReadFromJsonAsync<BookingModel>();
+            if (booking == null) return null;
+            booking.CheckInDate = DateTime.SpecifyKind(booking.CheckInDate, DateTimeKind.Utc).ToLocalTime();
+            booking.CheckOutDate = DateTime.SpecifyKind(booking.CheckOutDate, DateTimeKind.Utc).ToLocalTime();
+            booking.PayDate = DateTime.SpecifyKind(booking.PayDate, DateTimeKind.Utc).ToLocalTime();
+            return booking;
+        }
+
         /// <summary>
         /// Registra un "pago" para una reserva y genera la factura (invoice_number).
         /// </summary>
-        public static async Task<BookingModel?> PayBookingAsync(string bookingId)
+        public static async Task<BookingModel?> PayBookingAsync(string bookingId, object payload)
         {
-            // El backend puede calcular el desglose con extras/discount/tax si se le envían.
-            // Para la emulación, enviamos extras vacíos y 0 de descuento.
-            var payload = new
-            {
-                extras = new object[] { },
-                discountAmount = 0,
-                taxRate = 21,
-                company = new
-                {
-                    name = (string?)null,
-                    taxId = (string?)null,
-                    address = (string?)null
-                }
-            };
-
             var response = await CreateResponse($"{bookingId}/pay", payload, HttpMethod.Post);
             var data = await response.Content.ReadFromJsonAsync<PayBookingResponse>();
             return data?.booking;
+        }
+
+        /// <summary>Actualiza datos de factura ya emitida (PDF).</summary>
+        public static async Task<BookingModel?> PatchBookingInvoiceAsync(string bookingId, object payload)
+        {
+            var response = await CreateResponse($"{bookingId}/invoice", payload, HttpMethod.Patch);
+            return await response.Content.ReadFromJsonAsync<BookingModel>();
         }
 
         

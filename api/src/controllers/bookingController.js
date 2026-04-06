@@ -1,10 +1,17 @@
 import { bookingDatabaseModel, BookingEntryData } from "../models/bookingModel.js";
 import { roomDatabaseModel } from "../models/roomsModel.js"
 import mongoose from "mongoose";
+import { finalizeBookingDocumentIfPast, finalizePastBookings } from "../jobs/finalizePastBookings.js";
 import { userDatabaseModel } from "../models/usersModel.js";
 import { sendEmail } from "../lib/mail/mailing.js";
 import { auditLogModel } from "../models/auditLogModel.js";
 import puppeteer from "puppeteer";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DEFAULT_INVOICE_LOGO = path.resolve(__dirname, "../../assets/invoice-logo.png");
 
 const INVOICE_PREFIX = process.env.INVOICE_PREFIX ?? "FAC";
 const INVOICE_SEPARATOR = process.env.INVOICE_SEPARATOR ?? "-";
@@ -24,6 +31,38 @@ function formatDate(dateLike) {
     return d.toLocaleDateString("es-ES");
 }
 
+function escapeHtml(s) {
+    if (s == null || s === undefined) return "";
+    return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function mapExtrasFromRequestBody(body) {
+    const extrasInput = Array.isArray(body?.extras) ? body.extras : [];
+    return extrasInput
+        .map((extra) => ({
+            name: String(extra?.name || "").trim(),
+            quantity: Math.max(1, Number(extra?.quantity ?? 1)),
+            unitPrice: Math.max(0, Number(extra?.unitPrice ?? 0))
+        }))
+        .filter((extra) => extra.name.length > 0)
+        .map((extra) => ({ ...extra, total: toMoney(extra.quantity * extra.unitPrice) }));
+}
+
+function applyInvoiceMath(booking, mappedExtras, body) {
+    const nightsSubtotal = toMoney(booking.totalNights * booking.pricePerNight);
+    const extrasSubtotal = toMoney(mappedExtras.reduce((acc, extra) => acc + extra.total, 0));
+    const discountAmount = toMoney(Number(body?.discountAmount ?? 0));
+    const taxRate = Number(body?.taxRate ?? DEFAULT_TAX_RATE);
+    const taxableBase = Math.max(0, nightsSubtotal + extrasSubtotal - discountAmount);
+    const taxAmount = toMoney(taxableBase * (taxRate / 100));
+    const total = toMoney(taxableBase + taxAmount);
+    return { nightsSubtotal, extrasSubtotal, discountAmount, taxRate, taxAmount, total };
+}
+
 function renderCompanySection(company) {
     if (!company?.name) return "";
     return `
@@ -33,6 +72,29 @@ function renderCompanySection(company) {
       <p><strong>CIF/NIF:</strong> ${company.taxId || "-"}</p>
       <p><strong>Dirección:</strong> ${company.address || "-"}</p>
     </div>`;
+}
+
+/**
+ * Imagen del logo en el PDF: data URI desde archivo (PNG/JPG).
+ * Ruta: INVOICE_LOGO_PATH o api/assets/invoice-logo.png (copiar el logo del WPF).
+ */
+function invoiceLogoImgHtml() {
+    const logoPath = process.env.INVOICE_LOGO_PATH || DEFAULT_INVOICE_LOGO;
+    try {
+        if (!fs.existsSync(logoPath)) return "";
+        const buf = fs.readFileSync(logoPath);
+        const ext = path.extname(logoPath).toLowerCase();
+        const mime =
+            ext === ".png"
+                ? "image/png"
+                : ext === ".jpg" || ext === ".jpeg"
+                  ? "image/jpeg"
+                  : "image/png";
+        const src = `data:${mime};base64,${buf.toString("base64")}`;
+        return `<img class="invoice-logo" src="${src}" alt="" />`;
+    } catch {
+        return "";
+    }
 }
 
 function buildInvoiceHtml({ booking, client, room }) {
@@ -48,6 +110,8 @@ function buildInvoiceHtml({ booking, client, room }) {
             </tr>
           `).join("")
         : `<tr><td colspan="4">Sin extras</td></tr>`;
+
+    const logoBlock = invoiceLogoImgHtml();
 
     return `<!doctype html>
     <html>
@@ -67,18 +131,23 @@ function buildInvoiceHtml({ booking, client, room }) {
           .totals { margin-top: 14px; width: 320px; margin-left: auto; }
           .totals td { border: none; padding: 4px 0; }
           .totals tr.total td { font-size: 18px; font-weight: bold; border-top: 1px solid #ccc; padding-top: 8px; }
+          .header-main { display: flex; align-items: flex-start; gap: 18px; flex: 1; min-width: 0; }
+          .invoice-logo { max-height: 72px; max-width: 200px; object-fit: contain; display: block; filter: brightness(0); }
         </style>
       </head>
       <body>
         <div class="header">
-          <div>
+          <div class="header-main">
+            ${logoBlock}
+            <div>
             <h1>Factura ${booking.invoice_number || "-"}</h1>
             <p><strong>Fecha:</strong> ${formatDate(booking.invoiceDate || booking.payDate || new Date())}</p>
+            </div>
           </div>
           <div class="box">
-            <p><strong>${HOTEL_NAME}</strong></p>
-            <p>NIF: ${HOTEL_TAX_ID}</p>
-            <p>${HOTEL_ADDRESS}</p>
+            <p><strong>${escapeHtml(booking.invoiceIssuer?.name || HOTEL_NAME)}</strong></p>
+            <p>NIF: ${escapeHtml(booking.invoiceIssuer?.taxId || HOTEL_TAX_ID)}</p>
+            <p>${escapeHtml(booking.invoiceIssuer?.address || HOTEL_ADDRESS)}</p>
           </div>
         </div>
 
@@ -95,6 +164,7 @@ function buildInvoiceHtml({ booking, client, room }) {
         <div class="section box">
           <h3>Detalle de estancia</h3>
           <p><strong>Habitación:</strong> ${room?.roomNumber || "-"} (${room?.type || "-"})</p>
+          <p><strong>Extras de la habitación:</strong> ${Array.isArray(room?.extras) && room.extras.length ? escapeHtml(room.extras.join(", ")) : "—"}</p>
           <p><strong>Fechas:</strong> ${formatDate(booking.checkInDate)} - ${formatDate(booking.checkOutDate)}</p>
           <p><strong>Noches:</strong> ${booking.totalNights}</p>
           <p><strong>Precio por noche:</strong> ${toMoney(booking.pricePerNight).toFixed(2)} EUR</p>
@@ -174,7 +244,8 @@ export async function getOneBookingById(req, res) {
         const booking = await bookingDatabaseModel.findById(id);
         if (!booking) return res.status(404).json({ error: 'Reserva no encontrada' });
 
-        return res.status(200).json(booking);
+        const updated = await finalizeBookingDocumentIfPast(booking);
+        return res.status(200).json(updated);
     }
     catch (error) {
         console.error('Error al obtener la reserva:', error);
@@ -204,6 +275,7 @@ export async function getOneBookingById(req, res) {
  */
 export async function getBookings(req, res) {
     try {
+        await finalizePastBookings();
         const bookings = await bookingDatabaseModel.find();
         if (bookings.length == 0) return res.status(404).json({ error: 'No se encontraron reservas' });
 
@@ -242,6 +314,7 @@ export async function getBookingsByClientId(req, res) {
         if (!id) return res.status(400).json({ error: 'Se requiere ID del cliente' });
         if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'No es un ID' })
 
+        await finalizePastBookings();
         const bookings = await bookingDatabaseModel.find({ client: id });
         if (!bookings) return res.status(404).json({ error: 'No se encontraron reservas para el cliente' });
 
@@ -279,6 +352,7 @@ export async function getBookingsByRoomId(req, res) {
         if (!id) return res.status(400).json({ error: 'Se requiere ID de la habitación' });
         if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'No es un ID' })
 
+        await finalizePastBookings();
         const bookings = await bookingDatabaseModel.find({ room: id });
         if (!bookings) return res.status(404).json({ error: 'No se ha encontrado reservas para la habitación' });
 
@@ -440,6 +514,7 @@ export async function updateBooking(req, res) {
 
         const booking = await bookingDatabaseModel.findById(id);
         if (!booking) return res.status(404).json({ error: 'No hay reserva con este ID' });
+        if (booking.status !== 'Abierta') return res.status(400).json({ error: 'Solo se pueden modificar reservas abiertas' });
 
         const bookingData = new BookingEntryData(booking.room, booking.client, checkInDate, checkOutDate, guests);
         bookingData.fromDocument(booking);
@@ -532,46 +607,40 @@ export async function payBooking(req, res) {
 
         const booking = await bookingDatabaseModel.findById(id);
         if (!booking) return res.status(404).json({ error: 'No hay reserva con este ID' });
+        // Abierta: flujo normal. Finalizada: permite emitir factura / registrar pago tras checkout automático.
+        if (booking.status !== 'Abierta' && booking.status !== 'Finalizada') {
+            return res.status(400).json({ error: 'Solo se pueden facturar reservas abiertas o finalizadas (no canceladas)' });
+        }
 
-        const extrasInput = Array.isArray(req.body?.extras) ? req.body.extras : [];
-        const mappedExtras = extrasInput
-            .map((extra) => ({
-                name: String(extra?.name || "").trim(),
-                quantity: Math.max(1, Number(extra?.quantity ?? 1)),
-                unitPrice: Math.max(0, Number(extra?.unitPrice ?? 0))
-            }))
-            .filter((extra) => extra.name.length > 0)
-            .map((extra) => ({ ...extra, total: toMoney(extra.quantity * extra.unitPrice) }));
-
-        const nightsSubtotal = toMoney(booking.totalNights * booking.pricePerNight);
-        const extrasSubtotal = toMoney(mappedExtras.reduce((acc, extra) => acc + extra.total, 0));
-        const discountAmount = toMoney(Number(req.body?.discountAmount ?? 0));
-        const taxableBase = Math.max(0, nightsSubtotal + extrasSubtotal - discountAmount);
-        const taxRate = Number(req.body?.taxRate ?? DEFAULT_TAX_RATE);
-        const taxAmount = toMoney(taxableBase * (taxRate / 100));
-        const total = toMoney(taxableBase + taxAmount);
+        const mappedExtras = mapExtrasFromRequestBody(req.body);
+        const calc = applyInvoiceMath(booking, mappedExtras, req.body);
 
         if (!booking.invoice_number) {
             booking.invoice_number = await generateNextInvoiceNumber();
             booking.invoiceDate = new Date();
         }
 
+        booking.invoiceIssuer = {
+            name: req.body?.issuer?.name?.trim() || null,
+            taxId: req.body?.issuer?.taxId?.trim() || null,
+            address: req.body?.issuer?.address?.trim() || null
+        };
         booking.invoiceCompany = {
             name: req.body?.company?.name || null,
             taxId: req.body?.company?.taxId || null,
             address: req.body?.company?.address || null
         };
         booking.invoiceBreakdown = {
-            nightsSubtotal,
-            extrasSubtotal,
-            discountAmount,
-            taxRate,
-            taxAmount,
-            total,
+            nightsSubtotal: calc.nightsSubtotal,
+            extrasSubtotal: calc.extrasSubtotal,
+            discountAmount: calc.discountAmount,
+            taxRate: calc.taxRate,
+            taxAmount: calc.taxAmount,
+            total: calc.total,
             extras: mappedExtras
         };
 
-        booking.totalPrice = total;
+        booking.totalPrice = calc.total;
         booking.payDate = new Date();
         const bdBooking = await booking.save();
 
@@ -599,6 +668,53 @@ export async function payBooking(req, res) {
     } catch (error) {
         console.error('Error al procesar el pago de la reserva:', error);
         return res.status(500).json({ error: 'Error del servidor al procesar el pago' });
+    }
+}
+
+/**
+ * Actualiza datos de una factura ya generada (emisor, empresa facturada, extras, IVA) para reflejarlos en el PDF.
+ * Requiere que exista invoice_number. Admin / Trabajador.
+ */
+export async function patchBookingInvoice(req, res) {
+    try {
+        const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'No es un ID válido' });
+
+        const booking = await bookingDatabaseModel.findById(id);
+        if (!booking) return res.status(404).json({ error: 'No hay reserva con este ID' });
+        if (!booking.invoice_number) {
+            return res.status(400).json({ error: 'La reserva no tiene factura; use POST /booking/:id/pay' });
+        }
+
+        const mappedExtras = mapExtrasFromRequestBody(req.body);
+        const calc = applyInvoiceMath(booking, mappedExtras, req.body);
+
+        booking.invoiceIssuer = {
+            name: req.body?.issuer?.name?.trim() || null,
+            taxId: req.body?.issuer?.taxId?.trim() || null,
+            address: req.body?.issuer?.address?.trim() || null
+        };
+        booking.invoiceCompany = {
+            name: req.body?.company?.name || null,
+            taxId: req.body?.company?.taxId || null,
+            address: req.body?.company?.address || null
+        };
+        booking.invoiceBreakdown = {
+            nightsSubtotal: calc.nightsSubtotal,
+            extrasSubtotal: calc.extrasSubtotal,
+            discountAmount: calc.discountAmount,
+            taxRate: calc.taxRate,
+            taxAmount: calc.taxAmount,
+            total: calc.total,
+            extras: mappedExtras
+        };
+        booking.totalPrice = calc.total;
+
+        const bdBooking = await booking.save();
+        return res.status(200).json(bdBooking);
+    } catch (error) {
+        console.error('Error al actualizar datos de factura:', error);
+        return res.status(500).json({ error: 'Error del servidor al actualizar la factura' });
     }
 }
 

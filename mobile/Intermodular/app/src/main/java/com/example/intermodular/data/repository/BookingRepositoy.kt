@@ -112,7 +112,7 @@ class BookingRepository(
      * @return [Booking] - Objeto del dominio de la reserva actualizada
      */
     suspend fun payBooking(bookingId: String): Booking {
-        return api.payBooking(bookingId).toDomain()
+        return api.payBooking(bookingId).booking.toDomain()
     }
 
 

@@ -23,6 +23,11 @@ sealed class Routes(
     object UpdateProfile : Routes("updateProfile")
 
     /**
+     * Historial de auditoría (check-ins y pagos) del usuario
+     */
+    object MyHistory : Routes("myHistory")
+
+    /**
      * Pantalla de reservas del usuario
      * @author Axel Zaragoci
      */

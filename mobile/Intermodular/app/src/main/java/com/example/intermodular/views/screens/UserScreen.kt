@@ -28,7 +28,7 @@ import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
@@ -89,7 +89,8 @@ import java.time.format.DateTimeFormatter
  * @param error - Mensaje de error a mostrar (null si no hay error)
  * @param onRetry - Callback para reintentar la carga de datos
  * @param onErrorShown - Callback para limpiar/confirmar el error una vez mostrado
- * @param onViewMyBookings - Callback al pulsar "Ver mis reservas"
+ * @param onViewMyBookings - Callback al pulsar "Mis reservas"
+ * @param onMyHistory - Callback al pulsar "Mi historial" (auditoría de check-ins y pagos)
  * @param onChangePhoto - Callback al pulsar el botón de editar foto (dispara la selección de imagen)
  * @param onEditProfile - Callback al pulsar el botón de editar perfil
  * @param onChangePasswordClick - Callback al pulsar el botón de cambiar contraseña
@@ -98,11 +99,11 @@ import java.time.format.DateTimeFormatter
 fun UserScreen(
     isLoading: Boolean,
     user: UserModel?,
-    auditLogs: List<String>,
     error: String?,
     onRetry: () -> Unit,
     onErrorShown: () -> Unit,
     onViewMyBookings: () -> Unit,
+    onMyHistory: () -> Unit,
     onChangePhoto: () -> Unit,
     onEditProfile: () -> Unit,
     onChangePasswordClick: () -> Unit
@@ -235,50 +236,43 @@ fun UserScreen(
 
                 Spacer(Modifier.height(22.dp))
 
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    contentAlignment = Alignment.Center
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(onClick = onViewMyBookings) {
-                        Text(text = "Ver mis reservas")
-                    }
-                }
-
-                if (auditLogs.isNotEmpty()) {
-                    ElevatedCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 32.dp),
-                        shape = RoundedCornerShape(22.dp)
+                    Button(
+                        onClick = onViewMyBookings,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        Text(
+                            text = "Mis reservas",
+                            maxLines = 2,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                    Button(
+                        onClick = onMyHistory,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = "Historial de Actividad",
-                                style = MaterialTheme.typography.titleMedium
+                            Icon(
+                                imageVector = Icons.Outlined.History,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
                             )
-                            Divider()
-                            
-                            auditLogs.forEach { log ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Star,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = log,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                            }
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Mi historial",
+                                maxLines = 2,
+                                style = MaterialTheme.typography.labelLarge
+                            )
                         }
                     }
                 }
@@ -350,11 +344,11 @@ fun UserScreenState(
     UserScreen(
         isLoading = uiState.isLoading,
         user = uiState.user,
-        auditLogs = uiState.auditLogs,
         error = error,
         onRetry = { viewModel.refresh() },
         onErrorShown = { viewModel.clearError() },
         onViewMyBookings = { navigation.navigate(Routes.MyBookings.route) },
+        onMyHistory = { navigation.navigate(Routes.MyHistory.route) },
         onChangePhoto = {
             pickImageLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)

@@ -36,7 +36,7 @@ namespace desktop_app.ViewModels
             set { _filterStatus = value; OnPropertyChanged(); }
         }
 
-        public IReadOnlyList<string> BookingStatusOptions { get; } = new List<string> { "Todas", "Abierta", "Cancelada" };
+        public IReadOnlyList<string> BookingStatusOptions { get; } = new List<string> { "Todas", "Abierta", "Finalizada", "Cancelada" };
 
 
         private DateTime? _filterFromDate;
@@ -97,7 +97,7 @@ namespace desktop_app.ViewModels
             }
         }
 
-        private string _invoiceStatusText = "Pulsa Buscar para cargar facturas.";
+        private string _invoiceStatusText = "Cargando facturas...";
         public string InvoiceStatusText
         {
             get => _invoiceStatusText;
@@ -115,6 +115,7 @@ namespace desktop_app.ViewModels
         {
             Bookings = new ObservableCollection<BookingModel>();
             _ = LoadBookingsAsync();
+            _ = LoadInvoicesAsync();
             DeleteBookingCommand = new AsyncRelayCommand<BookingModel>(DeleteBookingAsync);
             EditBookingCommand = new RelayCommand(EditBooking);
             CreateBookingCommand = new RelayCommand(CreateBooking);
@@ -312,30 +313,16 @@ namespace desktop_app.ViewModels
             inv.ClientName = $"{user.FirstName} {user.LastName}".Trim();
         }
 
-        private async Task DownloadInvoiceRowAsync(InvoiceModel invoice)
+        private Task DownloadInvoiceRowAsync(InvoiceModel invoice)
         {
             if (string.IsNullOrWhiteSpace(invoice.Id))
-                return;
+                return Task.CompletedTask;
 
-            try
+            NavigationService.Instance.NavigateTo(() => new InvoicePrepareView
             {
-                var tempPath = System.IO.Path.Combine(
-                    System.IO.Path.GetTempPath(),
-                    $"factura_{invoice.Id}.pdf");
-
-                await BookingService.DownloadInvoicePdfAsync(invoice.Id, tempPath);
-
-                var psi = new System.Diagnostics.ProcessStartInfo(tempPath)
-                {
-                    UseShellExecute = true
-                };
-                System.Diagnostics.Process.Start(psi);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error al descargar la factura",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                DataContext = new InvoicePrepareViewModel(invoice.Id, returnToFormBooking: false)
+            });
+            return Task.CompletedTask;
         }
 
     }

@@ -249,6 +249,9 @@
             <DataTrigger Binding="{Binding Status}" Value="Abierta">
                 <Setter Property="Background" Value="#28a745"/>
             </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="Finalizada">
+                <Setter Property="Background" Value="#17a2b8"/>
+            </DataTrigger>
         </Style.Triggers>
     </Style>
     
@@ -369,6 +372,9 @@
             <DataTrigger Binding="{Binding Status}" Value="Abierta">
                 <Setter Property="IsEnabled" Value="False"/>
             </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="Finalizada">
+                <Setter Property="IsEnabled" Value="False"/>
+            </DataTrigger>
             
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="#c82333"/>
@@ -454,6 +460,9 @@
         
         <Style.Triggers>
             <DataTrigger Binding="{Binding Status}" Value="Abierta">
+                <Setter Property="IsEnabled" Value="False"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="Finalizada">
                 <Setter Property="IsEnabled" Value="False"/>
             </DataTrigger>
             

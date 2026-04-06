@@ -13,7 +13,7 @@ import { userDatabaseModel } from '../models/usersModel.js';
  * @property {number} totalPrice - Precio total de la reserva
  * @property {number} pricePerNight - Precio por noche de la reserva (Se guarda para facilitar el mostrar información en las aplicaciones correspondientes)
  * @property {number} offer - Porcentaje de descuento (Se guarda para facilitar el mostrar información en las aplicaciones correspondientes)
- * @property {"Cancelada"|"Abierta"} status - Estado de la reserva, "Finalizada" para las que ya han pasado el checkOutDate, "Cancelada" para las reservas canceladas por el usuario o empleados y "Abierta" para el resto
+ * @property {"Cancelada"|"Abierta"|"Finalizada"} status - "Finalizada" cuando ya pasó el checkOutDate (job o lectura), "Cancelada" si se canceló, "Abierta" para reservas vigentes
  * @property {number} guests - Cantidad de huéspedes en la habitación reservada
  * @property {number} totalNights - Cantidad total de noches
  * 
@@ -56,7 +56,7 @@ const bookingDatabaseSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ["Cancelada", "Abierta"],
+        enum: ["Cancelada", "Abierta", "Finalizada"],
         default: "Abierta"
     },
     guests: {
@@ -74,6 +74,11 @@ const bookingDatabaseSchema = new Schema({
     invoiceDate: {
         type: Date,
         default: null
+    },
+    invoiceIssuer: {
+        name: { type: String, default: null },
+        taxId: { type: String, default: null },
+        address: { type: String, default: null }
     },
     invoiceCompany: {
         name: { type: String, default: null },

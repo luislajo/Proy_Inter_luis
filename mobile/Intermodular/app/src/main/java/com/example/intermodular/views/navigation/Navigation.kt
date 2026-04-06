@@ -38,7 +38,9 @@ import com.example.intermodular.viewmodels.viewModelFacotry.MyBookingDetailsView
 import com.example.intermodular.viewmodels.viewModelFacotry.NewBookingViewModelFactory
 import com.example.intermodular.viewmodels.viewModelFacotry.RoomViewModelFactory
 import com.example.intermodular.viewmodels.viewModelFacotry.RoomDetailViewModelFactory
+import com.example.intermodular.viewmodels.MyAuditHistoryViewModel
 import com.example.intermodular.viewmodels.viewModelFactory.UserViewModelFactory
+import com.example.intermodular.viewmodels.viewModelFactory.MyAuditHistoryViewModelFactory
 import com.example.intermodular.viewmodels.PaymentViewModel
 import com.example.intermodular.viewmodels.viewModelFacotry.PaymentViewModelFactory
 import com.example.intermodular.views.screens.MyBookingDetailsState
@@ -46,6 +48,7 @@ import com.example.intermodular.views.screens.NewBookingState
 import com.example.intermodular.views.screens.PaymentState
 import com.example.intermodular.views.screens.RoomDetailScreen
 import com.example.intermodular.views.screens.UpdateProfileScreenState
+import com.example.intermodular.views.screens.MyAuditHistoryScreenState
 import com.example.intermodular.views.screens.UserScreenState
 
 @Composable
@@ -124,16 +127,27 @@ fun Navigation(
             // Obtener dependencias necesarias
             val api = RetrofitProvider.api
             val repository = UserRepository(api)
-            val bookingRepository = BookingRepository(api)
             val sessionManager = SessionManager
 
             // Crear ViewModel con su factory personalizada
             val viewModel: UserViewModel = viewModel(
-                factory = UserViewModelFactory(repository, bookingRepository, sessionManager)
+                factory = UserViewModelFactory(repository, sessionManager)
             )
 
             // Cargar pantalla conectada al estado
             UserScreenState(
+                viewModel = viewModel,
+                navController = navigationController
+            )
+        }
+
+        composable(Routes.MyHistory.route) {
+            val api = RetrofitProvider.api
+            val bookingRepository = BookingRepository(api)
+            val viewModel: MyAuditHistoryViewModel = viewModel(
+                factory = MyAuditHistoryViewModelFactory(bookingRepository)
+            )
+            MyAuditHistoryScreenState(
                 viewModel = viewModel,
                 navController = navigationController
             )
@@ -158,12 +172,11 @@ fun Navigation(
             // Obtener dependencias necesarias
             val api = RetrofitProvider.api
             val repository = UserRepository(api)
-            val bookingRepository = BookingRepository(api)
             val sessionManager = SessionManager
 
             // Crear ViewModel con su factory personalizada
             val viewModel: UserViewModel = viewModel(
-                factory = UserViewModelFactory(repository, bookingRepository, sessionManager)
+                factory = UserViewModelFactory(repository, sessionManager)
             )
 
             // Cargar pantalla conectada al estado

@@ -9,6 +9,7 @@ import {
     updateBooking,
     deleteBooking,
     payBooking,
+    patchBookingInvoice,
     getBookingInvoicePdf
 } from "../controllers/bookingController.js";
 import { getAuditLogByBookingId } from "../controllers/auditLogController.js";
@@ -28,6 +29,7 @@ router.post("/", verifyToken, createBooking);
 router.post("/:id/pay", verifyToken, payBooking);
 
 router.patch("/:id/cancel", verifyToken, auditMiddleware("booking", "id"), cancelBooking);
+router.patch("/:id/invoice", verifyToken, authorizeRoles(["Admin", "Trabajador"]), patchBookingInvoice);
 router.patch("/:id", verifyToken, auditMiddleware("booking", "id"), updateBooking);
 
 router.delete("/:id", verifyToken, authorizeRoles(["Admin"]), auditMiddleware("booking", "id"), deleteBooking);

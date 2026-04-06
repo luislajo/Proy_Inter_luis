@@ -250,8 +250,8 @@ namespace desktop_app.ViewModels
 
             SaveCommand = new RelayCommand(async _ => await Save());
             CancelCommand = new RelayCommand(async _ => await Cancel());
-            CheckoutPayCommand = new RelayCommand(async _ => await CheckoutPay());
-            DownloadInvoiceCommand = new RelayCommand(async _ => await DownloadInvoice());
+            CheckoutPayCommand = new RelayCommand(_ => NavigateToInvoicePrepare());
+            DownloadInvoiceCommand = new RelayCommand(_ => NavigateToInvoicePrepare());
 
             LoadClients();
             LoadRooms();
@@ -357,85 +357,22 @@ namespace desktop_app.ViewModels
             }
         }
 
-        private async Task DownloadInvoice()
-        {
-            if (string.IsNullOrEmpty(Booking.Id))
-            {
-                MessageBox.Show("Primero guarda la reserva antes de descargar la factura.",
-                    "Factura no disponible", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            try
-            {
-                var tempPath = System.IO.Path.Combine(
-                    System.IO.Path.GetTempPath(),
-                    $"factura_{Booking.Id}.pdf");
-
-                await BookingService.DownloadInvoicePdfAsync(Booking.Id, tempPath);
-
-                var psi = new System.Diagnostics.ProcessStartInfo(tempPath)
-                {
-                    UseShellExecute = true
-                };
-                System.Diagnostics.Process.Start(psi);
-            }
-            catch (Exception e)
-            {
-                MessageBox.Show(e.Message, "Error al descargar la factura",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
         /// <summary>
-        /// Emula el pago: llama al backend y genera invoice_number.
-        /// Luego (opcionalmente) permite descargar la factura.
+        /// Abre el panel de configuración de factura (encabezado, extras) antes de pagar o descargar.
         /// </summary>
-        private async Task CheckoutPay()
+        private void NavigateToInvoicePrepare()
         {
             if (string.IsNullOrEmpty(Booking.Id))
             {
-                MessageBox.Show("Guarda la reserva antes de pagar.",
-                    "Pago no disponible", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Primero guarda la reserva antes de facturar o descargar.",
+                    "Factura", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            if (MessageBox.Show("¿Deseas realizar el pago y generar la factura?", "Confirmar pago",
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            NavigationService.Instance.NavigateTo(() => new InvoicePrepareView
             {
-                return;
-            }
-
-            try
-            {
-                var updated = await BookingService.PayBookingAsync(Booking.Id);
-                if (updated == null)
-                {
-                    MessageBox.Show("No se pudo registrar el pago.",
-                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                // Actualizamos sólo lo necesario para la UI del formulario.
-                PayDate = updated.PayDate;
-                if (updated.TotalPrice != 0) TotalPrice = updated.TotalPrice;
-                if (updated.TotalNights != 0) TotalNights = updated.TotalNights;
-                if (updated.PricePerNight.HasValue) PricePerNight = updated.PricePerNight.Value;
-                if (updated.Offer.HasValue) Offer = updated.Offer.Value;
-
-                var openInvoice = MessageBox.Show("Pago realizado correctamente. ¿Descargar factura ahora?",
-                    "Factura lista", MessageBoxButton.YesNo, MessageBoxImage.Information);
-
-                if (openInvoice == MessageBoxResult.Yes)
-                {
-                    await DownloadInvoice();
-                }
-            }
-            catch (Exception e)
-            {
-                MessageBox.Show(e.Message, "Error al pagar",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                DataContext = new InvoicePrepareViewModel(Booking.Id, returnToFormBooking: true)
+            });
         }
 
         

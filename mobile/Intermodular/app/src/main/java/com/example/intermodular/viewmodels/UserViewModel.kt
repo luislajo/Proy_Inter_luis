@@ -6,7 +6,6 @@ import com.example.intermodular.data.remote.ApiErrorHandler
 import com.example.intermodular.data.remote.auth.SessionManager
 import com.example.intermodular.data.remote.dto.UpdateUserRequestDto
 import com.example.intermodular.data.repository.UserRepository
-import com.example.intermodular.data.repository.BookingRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.example.intermodular.models.UserModel
@@ -24,8 +23,7 @@ import okhttp3.MultipartBody
  */
 data class UserUiState(
     val isLoading: Boolean = false,
-    val user: UserModel? = null,
-    val auditLogs: List<String> = emptyList()
+    val user: UserModel? = null
 )
 
 /**
@@ -51,7 +49,6 @@ data class UserUiState(
  */
 class UserViewModel(
     private val repository: UserRepository,
-    private val bookingRepository: BookingRepository,
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -92,28 +89,11 @@ class UserViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             runCatching {
-                val user = repository.getMe()
-                val auditLogsDto = bookingRepository.getAuditLogsByUserId(userId)
-                
-                // Mapear los logs a texto amigable para el cliente
-                val formattedLogs = auditLogsDto.map { log ->
-                    val actionText = when (log.action) {
-                        "CREATE" -> "Reserva creada"
-                        "PAYMENT" -> "Pago recibido"
-                        "UPDATE" -> "Reserva actualizada"
-                        "CANCEL" -> "Reserva cancelada"
-                        else -> "Acción realizada: ${log.action}"
-                    }
-                    // Opcionalmente se puede añadir la fecha si the timestamp es ISO
-                    // Por simplicidad, y según el requerimiento, solo la acción
-                    actionText
-                }
-                Pair(user, formattedLogs)
-            }.onSuccess { (user, logs) ->
+                repository.getMe()
+            }.onSuccess { user ->
                 _uiState.value = UserUiState(
                     isLoading = false,
-                    user = user,
-                    auditLogs = logs
+                    user = user
                 )
             }.onFailure { throwable ->
                 _uiState.value = _uiState.value.copy(isLoading = false)

@@ -39,6 +39,12 @@ namespace desktop_app.Models
         [JsonPropertyName("totalNights")]
         public int TotalNights { get; set; }
 
+        [JsonPropertyName("invoice_number")]
+        public string? InvoiceNumber { get; set; }
+
+        [JsonPropertyName("invoiceIssuer")]
+        public InvoiceIssuerDto? InvoiceIssuer { get; set; }
+
         [JsonIgnore] 
         public string RoomNumber { get; set; } = "";
 
@@ -87,5 +93,18 @@ namespace desktop_app.Models
                    + "Total de noches: " + this.TotalNights + "\n"
                    + "Cantidad de huéspedes: " + this.Guests;
         }
+    }
+
+    /// <summary>Datos del emisor en la factura (cabecera PDF).</summary>
+    public class InvoiceIssuerDto
+    {
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("taxId")]
+        public string? TaxId { get; set; }
+
+        [JsonPropertyName("address")]
+        public string? Address { get; set; }
     }
 }

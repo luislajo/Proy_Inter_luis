@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { connectEmail } from './lib/mail/mailing.js';
 import connectDB from './config/db.js';
+import { startFinalizePastBookingsJob } from './jobs/finalizePastBookings.js';
 
 import bookingRouter from "./routers/bookingRouter.js";
 import roomsRouter from "./routers/roomsRouter.js";
@@ -17,7 +18,9 @@ import reviewsRouter from "./routers/reviewsRouter.js";
 import auditRouter from "./routers/auditRouter.js";
 import invoicesRouter from "./routers/invoicesRouter.js";
 dotenv.config();
-connectDB()
+connectDB().then(() => {
+  startFinalizePastBookingsJob();
+});
 connectEmail();
 
 const PORT = process.env.APP_PORT;

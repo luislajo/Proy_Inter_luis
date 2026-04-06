@@ -290,7 +290,7 @@
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
 
-                                <GridViewColumn Header="Cliente" HeaderContainerStyle="{StaticResource TableHeader}"  Width="195">
+                                <GridViewColumn Header="Cliente" HeaderContainerStyle="{StaticResource TableHeader}"  Width="165">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding ClientName}" Style="{StaticResource GridViewCellText}"/>
