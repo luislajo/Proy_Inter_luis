@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using desktop_app.Services;
 
 namespace desktop_app

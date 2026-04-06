@@ -1,5 +1,6 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.IO;
 using desktop_app.Models;
 using Newtonsoft.Json;
 
@@ -7,6 +8,12 @@ namespace desktop_app.Services
 {
     public static class BookingService
     {
+        public class PayBookingResponse
+        {
+            public string? status { get; set; }
+            public BookingModel? booking { get; set; }
+        }
+
         /// <summary>
         /// Obtiene las reservas de la API
         /// </summary>
@@ -43,6 +50,54 @@ namespace desktop_app.Services
                 ).IsSuccessStatusCode;
         }
 
+        public static async Task DownloadInvoicePdfAsync(string bookingId, string filePath)
+        {
+            var url = $"{ApiService.BaseUrl}booking/{bookingId}/invoice";
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Accept.Clear();
+            request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/pdf"));
+
+            using var response = await ApiService._httpClient.SendAsync(request);
+            await HandleError(response);
+
+            var bytes = await response.Content.ReadAsByteArrayAsync();
+            await File.WriteAllBytesAsync(filePath, bytes);
+        }
+
+        /// <summary>Obtiene una reserva por id (incluye invoice_number, invoiceIssuer si existen).</summary>
+        public static async Task<BookingModel?> GetBookingByIdAsync(string bookingId)
+        {
+            string url = $"{ApiService.BaseUrl}booking/{bookingId}";
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var response = await ApiService._httpClient.SendAsync(request);
+            await HandleError(response);
+            var booking = await response.Content.ReadFromJsonAsync<BookingModel>();
+            if (booking == null) return null;
+            booking.CheckInDate = DateTime.SpecifyKind(booking.CheckInDate, DateTimeKind.Utc).ToLocalTime();
+            booking.CheckOutDate = DateTime.SpecifyKind(booking.CheckOutDate, DateTimeKind.Utc).ToLocalTime();
+            booking.PayDate = DateTime.SpecifyKind(booking.PayDate, DateTimeKind.Utc).ToLocalTime();
+            return booking;
+        }
+
+        /// <summary>
+        /// Registra un "pago" para una reserva y genera la factura (invoice_number).
+        /// </summary>
+        public static async Task<BookingModel?> PayBookingAsync(string bookingId, object payload)
+        {
+            var response = await CreateResponse($"{bookingId}/pay", payload, HttpMethod.Post);
+            var data = await response.Content.ReadFromJsonAsync<PayBookingResponse>();
+            return data?.booking;
+        }
+
+        /// <summary>Actualiza datos de factura ya emitida (PDF).</summary>
+        public static async Task<BookingModel?> PatchBookingInvoiceAsync(string bookingId, object payload)
+        {
+            var response = await CreateResponse($"{bookingId}/invoice", payload, HttpMethod.Patch);
+            return await response.Content.ReadFromJsonAsync<BookingModel>();
+        }
+
+        
         
         /// <summary>
         /// Actualiza una reserva

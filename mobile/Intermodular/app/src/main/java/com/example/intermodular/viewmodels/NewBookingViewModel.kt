@@ -48,16 +48,10 @@ class NewBookingViewModel(
     val isLoading: StateFlow<Boolean> = _isLoading
 
     /**
-     * Controlador de visibilidad del popup de pago
+     * Indicador para navegar a la pantalla de pago con el ID de reserva
      */
-    private val _showPopup = MutableStateFlow(false)
-    val showPopup: StateFlow<Boolean> = _showPopup
-
-    /**
-     * Mensaje a mostrar en el popup de pago
-     */
-    private val _popupMessage = MutableStateFlow("")
-    val popupMessage: StateFlow<String> = _popupMessage
+    private val _navigateToPayment = MutableStateFlow<String?>(null)
+    val navigateToPayment: StateFlow<String?> = _navigateToPayment
 
     /**
      * Indicador de si se ha creado la reserva
@@ -197,16 +191,16 @@ class NewBookingViewModel(
             try {
                 _isLoading.value = true
 
-                bookingRepository.createBooking(
+                val booking = bookingRepository.createBooking(
                     roomId = roomId,
                     checkIn = _startDate.value,
                     checkOut = _endDate.value,
                     guests = _guests.value.toInt()
                 )
 
-                processPay()
-
                 _bookingCreated.value = true
+                _navigateToPayment.value = booking.id
+
             } catch (e: Exception) {
                 _errorMessage.value = ApiErrorHandler.getErrorMessage(e)
             } finally {
@@ -216,37 +210,13 @@ class NewBookingViewModel(
     }
 
     /**
-     * Simula un proceso de pago
-     *
-     * Flujo principal:
-     * 1. Muestra un mensaje "Procesando pago..."
-     * 2. Tras 3 segundos cambia el mensaje a "Pago completado"
-     * 3. Tras 1 segundo cierra el popup
+     * Resetea el evento de navegación de pago
      */
-    fun processPay() {
-        viewModelScope.launch {
-            _popupMessage.value = "Procesando pago..."
-            _showPopup.value = true
-
-            delay(3000)
-
-            _popupMessage.value = "Pago completado"
-
-            delay(1000)
-
-            closePopup()
-        }
+    fun onPaymentNavigated() {
+        _navigateToPayment.value = null
     }
-
 
     // ==================== MÉTODOS PRIVADOS ====================
-    /**
-     * Cierra el popup y vacía el mensaje a mostrar en el popup
-     */
-    private fun closePopup() {
-        _showPopup.value = false
-        _popupMessage.value = ""
-    }
 
     /**
      * Calcula el precio total de la reserva

@@ -28,7 +28,7 @@ import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
@@ -89,7 +89,8 @@ import java.time.format.DateTimeFormatter
  * @param error - Mensaje de error a mostrar (null si no hay error)
  * @param onRetry - Callback para reintentar la carga de datos
  * @param onErrorShown - Callback para limpiar/confirmar el error una vez mostrado
- * @param onViewMyBookings - Callback al pulsar "Ver mis reservas"
+ * @param onViewMyBookings - Callback al pulsar "Mis reservas"
+ * @param onMyHistory - Callback al pulsar "Mi historial" (auditoría de check-ins y pagos)
  * @param onChangePhoto - Callback al pulsar el botón de editar foto (dispara la selección de imagen)
  * @param onEditProfile - Callback al pulsar el botón de editar perfil
  * @param onChangePasswordClick - Callback al pulsar el botón de cambiar contraseña
@@ -102,6 +103,7 @@ fun UserScreen(
     onRetry: () -> Unit,
     onErrorShown: () -> Unit,
     onViewMyBookings: () -> Unit,
+    onMyHistory: () -> Unit,
     onChangePhoto: () -> Unit,
     onEditProfile: () -> Unit,
     onChangePasswordClick: () -> Unit
@@ -234,13 +236,44 @@ fun UserScreen(
 
                 Spacer(Modifier.height(22.dp))
 
-                // CTA para navegar a las reservas del usuario
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(onClick = onViewMyBookings) {
-                        Text(text = "Ver mis reservas")
+                    Button(
+                        onClick = onViewMyBookings,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "Mis reservas",
+                            maxLines = 2,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                    Button(
+                        onClick = onMyHistory,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.History,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Mi historial",
+                                maxLines = 2,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
                     }
                 }
             }
@@ -315,6 +348,7 @@ fun UserScreenState(
         onRetry = { viewModel.refresh() },
         onErrorShown = { viewModel.clearError() },
         onViewMyBookings = { navigation.navigate(Routes.MyBookings.route) },
+        onMyHistory = { navigation.navigate(Routes.MyHistory.route) },
         onChangePhoto = {
             pickImageLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)

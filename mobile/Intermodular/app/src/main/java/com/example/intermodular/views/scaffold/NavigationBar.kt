@@ -56,7 +56,10 @@ fun NavigationBarView(
                         text = item.name
                     )
                 },
-                selected = currentRoute == item.route,
+                selected = currentRoute == item.route ||
+                    (item.route == Routes.User.route &&
+                        (currentRoute == Routes.MyHistory.route ||
+                            currentRoute == Routes.UpdateProfile.route)),
                 onClick = {
                     onItemSelected(item.route)
                 },

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using desktop_app.Commands;
@@ -228,6 +228,14 @@ namespace desktop_app.ViewModels
         /// </summary>
         public ICommand CancelCommand { get; }
 
+        /// <summary>
+        /// Comando para emular el checkout/pago y generar factura en el backend.
+        /// </summary>
+        public ICommand CheckoutPayCommand { get; }
+
+        public ICommand DownloadInvoiceCommand { get; }
+
+
         public ICommand ReturnCommand { get; } =
             new RelayCommand(_ =>
                 NavigationService.Instance.NavigateTo<BookingView>());
@@ -242,6 +250,8 @@ namespace desktop_app.ViewModels
 
             SaveCommand = new RelayCommand(async _ => await Save());
             CancelCommand = new RelayCommand(async _ => await Cancel());
+            CheckoutPayCommand = new RelayCommand(_ => NavigateToInvoicePrepare());
+            DownloadInvoiceCommand = new RelayCommand(_ => NavigateToInvoicePrepare());
 
             LoadClients();
             LoadRooms();
@@ -346,5 +356,25 @@ namespace desktop_app.ViewModels
                 MessageBox.Show(e.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        /// <summary>
+        /// Abre el panel de configuración de factura (encabezado, extras) antes de pagar o descargar.
+        /// </summary>
+        private void NavigateToInvoicePrepare()
+        {
+            if (string.IsNullOrEmpty(Booking.Id))
+            {
+                MessageBox.Show("Primero guarda la reserva antes de facturar o descargar.",
+                    "Factura", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            NavigationService.Instance.NavigateTo(() => new InvoicePrepareView
+            {
+                DataContext = new InvoicePrepareViewModel(Booking.Id, returnToFormBooking: true)
+            });
+        }
+
+        
     }
 }

@@ -2,6 +2,7 @@
 
 import com.example.intermodular.data.remote.ApiService
 import com.example.intermodular.data.remote.auth.SessionManager
+import com.example.intermodular.data.remote.dto.AuditLogDto
 import com.example.intermodular.data.remote.dto.CreateBookingDto
 import com.example.intermodular.data.remote.dto.UpdateBookingDto
 import com.example.intermodular.data.remote.mapper.toDomain
@@ -57,6 +58,18 @@ class BookingRepository(
             .map { it.toDomain() }
     }
 
+    /**
+     * Obtiene el historial de auditoría de un usuario
+     *
+     * @param id - ID del cliente
+     * @return [List<AuditLogDto>] - Lista de acciones auditadas
+     * @throws retrofit2.HttpException - Si hay un error en la petición
+     * @throws IOException - Si hay error de red
+     */
+    suspend fun getAuditLogsByUserId(id: String): List<AuditLogDto> {
+        return api.getAuditLogsByUserId(id)
+    }
+
 
     /**
      * Crea una nueva reserva para el usuario autenticado.
@@ -89,6 +102,17 @@ class BookingRepository(
         )
 
         return api.createBooking(dto).toDomain()
+    }
+
+
+    /**
+     * Registra el pago en la auditoría
+     *
+     * @param bookingId - ID de la reserva a registrar el pago
+     * @return [Booking] - Objeto del dominio de la reserva actualizada
+     */
+    suspend fun payBooking(bookingId: String): Booking {
+        return api.payBooking(bookingId).booking.toDomain()
     }
 
 

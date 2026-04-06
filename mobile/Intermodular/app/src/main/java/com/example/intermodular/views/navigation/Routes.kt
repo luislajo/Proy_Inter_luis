@@ -23,6 +23,11 @@ sealed class Routes(
     object UpdateProfile : Routes("updateProfile")
 
     /**
+     * Historial de auditoría (check-ins y pagos) del usuario
+     */
+    object MyHistory : Routes("myHistory")
+
+    /**
      * Pantalla de reservas del usuario
      * @author Axel Zaragoci
      */
@@ -40,6 +45,13 @@ sealed class Routes(
          * @return Ruta completa con el ID insertado
          */
         fun createRoute(bookingId: String) = "details/$bookingId"
+    }
+
+    /**
+     * Pantalla de pago por pasarela simulada
+     */
+    object Payment : Routes("payment/{bookingId}") {
+        fun createRoute(bookingId: String) = "payment/$bookingId"
     }
 
     /**

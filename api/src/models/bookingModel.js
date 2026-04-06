@@ -13,7 +13,7 @@ import { userDatabaseModel } from '../models/usersModel.js';
  * @property {number} totalPrice - Precio total de la reserva
  * @property {number} pricePerNight - Precio por noche de la reserva (Se guarda para facilitar el mostrar información en las aplicaciones correspondientes)
  * @property {number} offer - Porcentaje de descuento (Se guarda para facilitar el mostrar información en las aplicaciones correspondientes)
- * @property {"Cancelada"|"Abierta"} status - Estado de la reserva, "Finalizada" para las que ya han pasado el checkOutDate, "Cancelada" para las reservas canceladas por el usuario o empleados y "Abierta" para el resto
+ * @property {"Cancelada"|"Abierta"|"Finalizada"} status - "Finalizada" cuando ya pasó el checkOutDate (job o lectura), "Cancelada" si se canceló, "Abierta" para reservas vigentes
  * @property {number} guests - Cantidad de huéspedes en la habitación reservada
  * @property {number} totalNights - Cantidad total de noches
  * 
@@ -56,7 +56,7 @@ const bookingDatabaseSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ["Cancelada", "Abierta"],
+        enum: ["Cancelada", "Abierta", "Finalizada"],
         default: "Abierta"
     },
     guests: {
@@ -66,6 +66,38 @@ const bookingDatabaseSchema = new Schema({
     totalNights: {
         type: Number,
         required: true
+    },
+    invoice_number: {
+        type: String,
+        default: null
+    },
+    invoiceDate: {
+        type: Date,
+        default: null
+    },
+    invoiceIssuer: {
+        name: { type: String, default: null },
+        taxId: { type: String, default: null },
+        address: { type: String, default: null }
+    },
+    invoiceCompany: {
+        name: { type: String, default: null },
+        taxId: { type: String, default: null },
+        address: { type: String, default: null }
+    },
+    invoiceBreakdown: {
+        nightsSubtotal: { type: Number, default: null },
+        extrasSubtotal: { type: Number, default: 0 },
+        discountAmount: { type: Number, default: 0 },
+        taxRate: { type: Number, default: 21 },
+        taxAmount: { type: Number, default: null },
+        total: { type: Number, default: null },
+        extras: [{
+            name: { type: String, required: true },
+            quantity: { type: Number, default: 1 },
+            unitPrice: { type: Number, required: true },
+            total: { type: Number, required: true }
+        }]
     }
 }, {
     toJSON: {
@@ -77,7 +109,7 @@ const bookingDatabaseSchema = new Schema({
     }
 });
 
-bookingDatabaseSchema.methods.poblar = async function() {
+bookingDatabaseSchema.methods.poblar = async function () {
     const userObject = await userDatabaseModel.findById(this.client).lean();
     const roomObject = await roomDatabaseModel.findById(this.room).lean();
 
@@ -149,11 +181,11 @@ export class BookingEntryData {
      */
     async validate() {
         function isNumeric(o) {
-            return typeof(o) === 'number' && o > 0
+            return typeof (o) === 'number' && o > 0
         }
         function isValidDate(d) {
             return d instanceof Date && !isNaN(d.getTime());
-        }        
+        }
 
         const errors = [];
         if (!isValidObjectId(this.roomID)) errors.push("El ID de la habitación es inválido");
@@ -191,7 +223,7 @@ export class BookingEntryData {
             }
         }
 
-        
+
         if (!isNumeric(this.guests)) errors.push("La cantidad de huéspedes debe ser un número mayor que 0");
 
         if (errors.length != 0) {
@@ -206,15 +238,17 @@ export class BookingEntryData {
     save() {
         if (!this.ready) throw new Error("Reserva no lista. Completa la información");
         const doc = this.doc ?? new bookingDatabaseModel();
-        const data = {room: this.roomID, 
-                        client: this.clientID, 
-                        checkInDate: this.checkInDate.toISOString(), 
-                        checkOutDate: this.checkOutDate.toISOString(), 
-                        totalPrice: this.totalPrice, 
-                        pricePerNight: this.pricePerNight, 
-                        offer: this.offer, 
-                        guests: this.guests, 
-                        totalNights: this.totalNights};
+        const data = {
+            room: this.roomID,
+            client: this.clientID,
+            checkInDate: this.checkInDate.toISOString(),
+            checkOutDate: this.checkOutDate.toISOString(),
+            totalPrice: this.totalPrice,
+            pricePerNight: this.pricePerNight,
+            offer: this.offer,
+            guests: this.guests,
+            totalNights: this.totalNights
+        };
         return doc.set(data).save();
     }
 

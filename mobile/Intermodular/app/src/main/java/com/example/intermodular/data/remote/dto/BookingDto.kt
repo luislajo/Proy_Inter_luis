@@ -15,7 +15,7 @@ import java.time.Instant
  * @param totalPrice - Precio total pagado por la reserva
  * @param pricePerNight - Precio por noche pagado por la reserva
  * @param offer - Porcentaje de descuento aplicado a los precios anteriores
- * @param status - Estado actual de la reserva. Puede ser "Abierta" o "Cancelada"
+ * @param status - Estado actual: "Abierta", "Finalizada" o "Cancelada"
  * @param guests - Cantidad de huéspedes para la reserva
  * @param totalNights - Cantidad total de noches de la reserva
  */

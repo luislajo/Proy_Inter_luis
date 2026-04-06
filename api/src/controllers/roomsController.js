@@ -1,5 +1,6 @@
 
 import { roomDatabaseModel, RoomEntryData } from "../models/roomsModel.js";
+import { auditLogModel } from "../models/auditLogModel.js";
 
 /**
  * Crea una nueva habitación.
@@ -52,6 +53,18 @@ export const createRoom = async (req, res) => {
     // Convierte a documento Mongoose y guarda
     const doc = entry.toDocument();
     const saved = await doc.save();
+
+    // Registro de auditoría para la creación
+    auditLogModel.create({
+      entity_type: 'room',
+      entity_id: saved._id,
+      action: 'CREATE',
+      actor_id: req.user.id,
+      actor_type: req.user.rol,
+      previous_state: null,
+      new_state: saved.toJSON(),
+      timestamp: new Date()
+    }).catch(err => console.error('Error al crear audit log:', err));
 
     return res.status(200).json(saved);
   } catch (err) {

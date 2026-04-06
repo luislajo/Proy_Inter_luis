@@ -79,6 +79,12 @@ class UserViewModel(
      * 4. En caso de error, desactiva carga y publica mensaje de error.
      */
     fun refresh() {
+        val userId = SessionManager.getUserId()
+        if (userId == null) {
+            _errorMessage.value = "User is not logged in"
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 

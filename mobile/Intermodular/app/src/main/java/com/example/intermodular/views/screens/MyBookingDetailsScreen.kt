@@ -37,7 +37,7 @@ import com.example.intermodular.models.Booking
 import com.example.intermodular.models.Room
 import com.example.intermodular.viewmodels.MyBookingDetailsViewModel
 import com.example.intermodular.views.components.BookingDataForm
-import com.example.intermodular.views.components.PaymentPopup
+import androidx.compose.runtime.LaunchedEffect
 
 /**
  * Pantalla de detalles y actualización de una reserva
@@ -55,15 +55,14 @@ import com.example.intermodular.views.components.PaymentPopup
  * @param loading - Estado de carga de datos
  * @param error - Mensaje de error a mostrar (null si no hay error)
  * @param room - Habitación asociada a la reserva
- * @param status - Estado actual de la reserva ("Abierta", "Cancelada")
+ * @param status - Estado actual de la reserva ("Abierta", "Finalizada", "Cancelada")
  * @param booking - Datos completos de la reserva
  * @param startDate - Fecha de inicio seleccionada (en milisegundos)
  * @param endDate - Fecha de fin seleccionada (en milisegundos)
- * @param showPopup - Controla la visibilidad del popup de pago
- * @param popupMessage - Mensaje a mostrar en el popup de pago
+ * @param navigateToPayment - ID de la reserva a la que navegar para el pago
+ * @param onNavigateToPayment - Callback que ejecuta la navegación
  * @param reviewDescription - Descripción de la reseña
  * @param rating - Calificación de la reseña
- * @param onPopupDismiss - Callback al cerrar el popup
  * @param onUpdateClick - Callback al hacer clic en "Actualizar"
  * @param onCancelClick - Callback al hacer clic en "Cancelar reserva"
  * @param onStartDateChange - Callback al cambiar fecha de entrada
@@ -82,12 +81,11 @@ fun MyBookingDetailsScreen(
     booking: Booking?,
     startDate: Long?,
     endDate: Long?,
-    showPopup : Boolean,
-    popupMessage : String,
+    navigateToPayment: String?,
+    onNavigateToPayment: (String) -> Unit,
     reviewDescription: String,
     rating: Int,
     created: Boolean,
-    onPopupDismiss: () -> Unit,
     onUpdateClick: () -> Unit,
     onCancelClick: () -> Unit,
     onStartDateChange: (Long?) -> Unit,
@@ -97,6 +95,11 @@ fun MyBookingDetailsScreen(
     onReviewDescriptionChange: (String) -> Unit,
     onRatingChange: (Int) -> Unit
 ) {
+    LaunchedEffect(navigateToPayment) {
+        navigateToPayment?.let {
+            onNavigateToPayment(it)
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -248,13 +251,6 @@ fun MyBookingDetailsScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-
-                    // POPUP DE PAGO
-                    PaymentPopup(
-                        show = showPopup,
-                        message = popupMessage,
-                        onDismiss = onPopupDismiss
-                    )
                 }
             }
         }
@@ -274,7 +270,8 @@ fun MyBookingDetailsScreen(
  */
 @Composable
 fun MyBookingDetailsState(
-    viewModel: MyBookingDetailsViewModel
+    viewModel: MyBookingDetailsViewModel,
+    onNavigateToPayment: (String) -> Unit
 ) {
     val loading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -283,8 +280,7 @@ fun MyBookingDetailsState(
     val reviewDescription by viewModel.reviewDescription.collectAsStateWithLifecycle()
     val reviewRate by viewModel.reviewRating.collectAsStateWithLifecycle()
     val reviewCreated by viewModel.reviewCreated.collectAsStateWithLifecycle()
-    val showPopup by viewModel.showPopup.collectAsStateWithLifecycle()
-    val popupMessage by viewModel.popupMessage.collectAsStateWithLifecycle()
+    val navigateToPayment by viewModel.navigateToPayment.collectAsStateWithLifecycle()
 
     MyBookingDetailsScreen(
         loading = loading,
@@ -292,9 +288,11 @@ fun MyBookingDetailsState(
         room = room,
         status = booking?.status,
         booking = booking,
-        showPopup = showPopup,
-        popupMessage = popupMessage,
-        onPopupDismiss = {},
+        navigateToPayment = navigateToPayment,
+        onNavigateToPayment = { 
+            viewModel.onPaymentNavigated()
+            onNavigateToPayment(it) 
+        },
         reviewDescription = reviewDescription,
         rating = reviewRate,
         created = reviewCreated,

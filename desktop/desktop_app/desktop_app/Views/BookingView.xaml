@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="desktop_app.Views.BookingView"
+<UserControl x:Class="desktop_app.Views.BookingView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -13,103 +13,355 @@
         <viewmodels:BookingViewModel/>
     </UserControl.DataContext>
     
-    <Grid Background="Transparent"  Margin="22">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="0.2*"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        
-        <Border Style="{StaticResource HeaderWrapper}">
-                <DockPanel LastChildFill="False" VerticalAlignment="Center">
-                    <TextBlock Style="{StaticResource HeaderMainTitle}" DockPanel.Dock="Left" Text="Reservas"/>
-                    
-                    <Button Style="{StaticResource HeaderNavigateButton}" Content="+  Crear reserva" DockPanel.Dock="Right" Command="{Binding CreateBookingCommand}"/>
-                </DockPanel>
-        </Border>
-        
-        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Margin="0 0 0 10">
-            <Button Style="{StaticResource SaveBtn}" Content="Recargar" Command="{Binding ReloadBookingCommand}"/>
-        </StackPanel>
-        
-        <ListView Grid.Row="2" ItemsSource="{Binding Bookings}" SizeChanged="ListView_SizeChanged" AlternationCount="2" ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}" Margin="10 3" BorderThickness="0.5">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="Habitación" HeaderContainerStyle="{StaticResource TableHeader}">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                    <TextBlock Text="{Binding RoomNumber}" Style="{StaticResource GridViewCellText}"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    
-                    <GridViewColumn Header="Cliente" HeaderContainerStyle="{StaticResource TableHeader}">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                    <TextBlock Text="{Binding ClientName}" Style="{StaticResource GridViewCellText}"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    
-                    <GridViewColumn Header="Fecha de inicio" HeaderContainerStyle="{StaticResource TableHeader}">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding CheckInDate, StringFormat='dd/MM/yyyy'}" Style="{StaticResource GridViewCellText}"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    
-                    <GridViewColumn Header="Fecha de fin" HeaderContainerStyle="{StaticResource TableHeader}">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding CheckOutDate, StringFormat='dd/MM/yyyy'}" Style="{StaticResource GridViewCellText}"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    
-                    <GridViewColumn Header="Fecha de pago" HeaderContainerStyle="{StaticResource TableHeader}">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding PayDate, StringFormat='dd/MM/yyyy'}" Style="{StaticResource GridViewCellText}"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    
-                    <GridViewColumn Header="Total de noches" HeaderContainerStyle="{StaticResource TableHeader}">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding TotalNights}" Style="{StaticResource GridViewCellText}"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    
-                    <GridViewColumn Header="Estado" HeaderContainerStyle="{StaticResource TableHeader}">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <Border Style="{StaticResource StatusTextStyle}">
-                                    <TextBlock Text="{Binding Status}" Style="{StaticResource GridViewCellText}" Foreground="#ffffff"/>
-                                </Border>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    
-                    <GridViewColumn Header="" HeaderContainerStyle="{StaticResource TableHeader}" Width="65">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Style="{StaticResource UpdateBookingBtn}" Content="edit" Command="{Binding DataContext.EditBookingCommand, RelativeSource={RelativeSource AncestorType=ListView}}" CommandParameter="{Binding}"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    
-                    <GridViewColumn Header="" HeaderContainerStyle="{StaticResource TableHeader}" Width="65">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Style="{StaticResource DeleteBookingBtn}" Content="delete" Command="{Binding DataContext.DeleteBookingCommand, RelativeSource={RelativeSource AncestorType=ListView}}" CommandParameter="{Binding}"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                </GridView>
-            </ListView.View>
-        </ListView>
+    <Grid Margin="22">
+        <TabControl Background="#F8F6F0"
+                    BorderThickness="0"
+                    Foreground="#1f3b4d"
+                    ItemContainerStyle="{StaticResource AppTabItem}">
+            <!-- TAB RESERVAS -->
+            <TabItem Header="Reservas">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- HEADER + FILTROS (similar a RoomView) -->
+                    <Border Grid.Row="0" Style="{StaticResource HeaderWrapper}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Título + botón crear -->
+                            <DockPanel Grid.Row="0" LastChildFill="False">
+                                <TextBlock Style="{StaticResource HeaderMainTitle}"
+                                           DockPanel.Dock="Left"
+                                           Text="Reservas"/>
+                                <Button Style="{StaticResource HeaderNavigateButton}"
+                                        Content="+  Crear reserva"
+                                        DockPanel.Dock="Right"
+                                        Command="{Binding CreateBookingCommand}"/>
+                            </DockPanel>
+
+                            <!-- Card filtros -->
+                            <Border Grid.Row="1"
+                                    Background="#F7FAFD"
+                                    CornerRadius="14"
+                                    Padding="12"
+                                    Margin="0,14,0,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.4*"/>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="1.3*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Cliente -->
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                                        <Label Content="Cliente (nombre o DNI)" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <TextBox Style="{StaticResource TextBoxForm}"
+                                                 Text="{Binding FilterClientText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <!-- Estado -->
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,10,10">
+                                        <Label Content="Estado" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <ComboBox Style="{StaticResource DropdownStyle}"
+                                                  ItemsSource="{Binding BookingStatusOptions}"
+                                                  SelectedItem="{Binding FilterStatus, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <!-- Rango fechas -->
+                                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,10">
+                                        <Label Content="Rango de entrada" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <DatePicker Width="120"
+                                                        SelectedDate="{Binding FilterFromDate, Mode=TwoWay}"
+                                                        Style="{StaticResource DatePickerForm}"/>
+                                            <TextBlock Text=" - " VerticalAlignment="Center" Margin="4,0"/>
+                                            <DatePicker Width="120"
+                                                        SelectedDate="{Binding FilterToDate, Mode=TwoWay}"
+                                                        Style="{StaticResource DatePickerForm}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Botones -->
+                                    <StackPanel Grid.Row="1"
+                                                Grid.ColumnSpan="3"
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Bottom">
+                                        <Button Style="{StaticResource ClearFiltersBtn}"
+                                                Content="Limpiar"
+                                                Command="{Binding ClearBookingFiltersCommand}"
+                                                Height="38"
+                                                Padding="15,0"
+                                                Margin="0,0,10,0"
+                                                FontSize="14"/>
+                                        <Button Style="{StaticResource SaveBtn}"
+                                                Content="Buscar"
+                                                Command="{Binding SearchBookingsCommand}"
+                                                Height="38"
+                                                Width="120"
+                                                FontSize="14"
+                                                FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Lista reservas -->
+                    <ListView Grid.Row="2"
+                              ItemsSource="{Binding Bookings}"
+                              SizeChanged="ListView_SizeChanged"
+                              AlternationCount="2"
+                              ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
+                              Margin="10 3"
+                              BorderThickness="0.5">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Habitación" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding RoomNumber}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Cliente" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding ClientName}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Fecha de inicio" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding CheckInDate, StringFormat='dd/MM/yyyy'}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Fecha de fin" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding CheckOutDate, StringFormat='dd/MM/yyyy'}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Fecha de pago" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding PayDate, StringFormat='dd/MM/yyyy'}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Total de noches" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding TotalNights}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Estado" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource StatusTextStyle}">
+                                                <TextBlock Text="{Binding Status}" Style="{StaticResource GridViewCellText}" Foreground="#ffffff"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="" HeaderContainerStyle="{StaticResource TableHeader}" Width="65">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource UpdateBookingBtn}" Content="edit" Command="{Binding DataContext.EditBookingCommand, RelativeSource={RelativeSource AncestorType=ListView}}" CommandParameter="{Binding}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="" HeaderContainerStyle="{StaticResource TableHeader}" Width="65">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource DeleteBookingBtn}" Content="delete" Command="{Binding DataContext.DeleteBookingCommand, RelativeSource={RelativeSource AncestorType=ListView}}" CommandParameter="{Binding}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </TabItem>
+
+            <!-- TAB FACTURAS -->
+            <TabItem Header="Facturas">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                  
+                    <Border Grid.Row="0" Style="{StaticResource HeaderWrapper}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Título -->
+                            <DockPanel Grid.Row="0" LastChildFill="False">
+                                <TextBlock DockPanel.Dock="Left"
+                                           Text="Facturas"
+                                           Style="{StaticResource HeaderMainTitle}"/>
+                            </DockPanel>
+
+                            <!-- Tarjeta de filtros -->
+                            <Border Grid.Row="1"
+                                    Background="#F7FAFD"
+                                    CornerRadius="14"
+                                    Padding="12"
+                                    Margin="0,14,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Campo filtro -->
+                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                        <Label Content="DNI / NIE" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding InvoiceDocumentFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource TextBoxForm}"/>
+                                    </StackPanel>
+
+                                    <!-- Botón buscar -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Orientation="Horizontal">
+                                        <Button Style="{StaticResource SaveBtn}"
+                                                Content="Buscar"
+                                                Command="{Binding LoadInvoicesCommand}"
+                                                Height="38"
+                                                Width="120"
+                                                Margin="0,0,0,0"
+                                                FontSize="14"
+                                                FontWeight="SemiBold"/>
+                                    </StackPanel>
+
+                                    <!-- Texto de estado -->
+                                    <TextBlock Grid.Column="2"
+                                               Margin="16,8,0,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="#6B7280"
+                                               Text="{Binding InvoiceStatusText}"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <ListView Grid.Row="2"
+                              ItemsSource="{Binding Invoices}"
+                              AlternationCount="2"
+                              ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
+                              Margin="10 3"
+                              BorderThickness="0.5">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Factura" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding InvoiceNumber}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Cliente" HeaderContainerStyle="{StaticResource TableHeader}"  Width="165">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding ClientName}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="DNI / NIE" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding ClientDni}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Entrada" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding CheckInDate, StringFormat='dd/MM/yyyy'}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Salida" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding CheckOutDate, StringFormat='dd/MM/yyyy'}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Noches" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding TotalNights}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Total" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding TotalPrice, StringFormat='{}{0:F2} €'}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Estado" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Status}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="" HeaderContainerStyle="{StaticResource TableHeader}" Width="72">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource UpdateBookingBtn}"
+                                                    Content="download"
+                                                    ToolTip="Descargar factura PDF"
+                                                    Command="{Binding DataContext.DownloadInvoiceRowCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </Grid>
 </UserControl>
