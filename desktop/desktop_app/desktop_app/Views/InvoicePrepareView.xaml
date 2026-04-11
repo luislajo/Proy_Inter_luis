@@ -21,123 +21,87 @@
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
             <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                    <Button Content="Volver" Style="{StaticResource RedReturnBtn}" Command="{Binding BackCommand}" Width="120"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <Button Content="Volver" Style="{StaticResource RedReturnBtn}" Command="{Binding BackCommand}" Width="96"/>
                     <Button Content="Guardar y abrir PDF" Style="{StaticResource SaveBtn}"
-                            Command="{Binding ApplyAndDownloadCommand}" Margin="12,0,0,0" MinWidth="200"/>
-                    <Button Content="Solo descargar PDF actual" Style="{StaticResource SaveBtn}"
-                            Command="{Binding DownloadOnlyCommand}" Margin="12,0,0,0" MinWidth="220"
+                            Command="{Binding ApplyAndDownloadCommand}" Margin="10,0,0,0" MinWidth="160"/>
+                    <Button Content="Descargar PDF" Style="{StaticResource SaveBtn}"
+                            Command="{Binding DownloadOnlyCommand}" Margin="10,0,0,0" MinWidth="140"
                             IsEnabled="{Binding HasExistingInvoice}"/>
                 </StackPanel>
 
-                <TextBlock Text="Datos del emisor" FontWeight="SemiBold" Margin="0,8,0,8"/>
-                <Label Content="Nombre" Style="{StaticResource LabelForm}"/>
-                <TextBox Text="{Binding IssuerName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}"/>
-                <Label Content="CIF" Style="{StaticResource LabelForm}"/>
-                <TextBox Text="{Binding IssuerTaxId, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}"/>
-                <Label Content="Dirección fiscal" Style="{StaticResource LabelForm}"/>
-                <TextBox Text="{Binding IssuerAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="56"/>
-
-                <TextBlock Text="Datos de empresa facturada (opcional, cliente B2B)" FontWeight="SemiBold" Margin="0,16,0,8"/>
+                <TextBlock Text="Datos de empresa facturada" FontWeight="SemiBold" Margin="0,8,0,8"/>
                 <Label Content="Nombre o razón social" Style="{StaticResource LabelForm}"/>
                 <TextBox Text="{Binding CompanyName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}"/>
                 <Label Content="CIF" Style="{StaticResource LabelForm}"/>
-                <TextBox Text="{Binding CompanyTaxId, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}"/>
+                <TextBox Text="{Binding CompanyTaxId, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource TextBoxForm}"
+                         ToolTip="Ejemplo de CIF de empresa en España: B12345678"/>
+                <TextBlock Text="Ej.: B12345678 (empresa ficticia)"
+                           Foreground="#6B7280" FontSize="11" Margin="0,-2,0,6"/>
                 <Label Content="Dirección fiscal" Style="{StaticResource LabelForm}"/>
                 <TextBox Text="{Binding CompanyAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}" TextWrapping="Wrap" MinHeight="44"/>
 
-                <Grid Margin="0,12,0,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                        <Label Content="Descuento (€)" Style="{StaticResource LabelForm}"/>
-                        <TextBox Text="{Binding DiscountAmount, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                        <Label Content="IVA (%)" Style="{StaticResource LabelForm}"/>
-                        <TextBox Text="{Binding TaxRate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}"/>
-                    </StackPanel>
-                </Grid>
-
-                <TextBlock Text="Extras facturables (desde la habitación)" FontWeight="SemiBold" Margin="0,12,0,8"/>
-                <ListView x:Name="ExtrasListView"
-                          ItemsSource="{Binding ExtraRows}"
-                          AlternationCount="2"
-                          ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
-                          Margin="10,3"
-                          BorderThickness="0.5"
-                          MinHeight="180"
-                          SizeChanged="ExtrasList_SizeChanged">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="Incl." Width="52" HeaderContainerStyle="{StaticResource TableHeader}">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <CheckBox IsChecked="{Binding Include, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Concepto" Width="280" HeaderContainerStyle="{StaticResource TableHeader}">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                                 BorderBrush="#D1D5DB"
-                                                 BorderThickness="0.5"
-                                                 Padding="8,6"
-                                                 VerticalContentAlignment="Center"
-                                                 MinHeight="30"
-                                                 Margin="2"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Cant." Width="72" HeaderContainerStyle="{StaticResource TableHeader}">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBox Text="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}"
-                                                 BorderBrush="#D1D5DB"
-                                                 BorderThickness="0.5"
-                                                 Padding="8,6"
-                                                 VerticalContentAlignment="Center"
-                                                 MinHeight="30"
-                                                 Margin="2"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="€ / u." Width="88" HeaderContainerStyle="{StaticResource TableHeader}">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBox Text="{Binding UnitPrice, UpdateSourceTrigger=PropertyChanged}"
-                                                 BorderBrush="#D1D5DB"
-                                                 BorderThickness="0.5"
-                                                 Padding="8,6"
-                                                 VerticalContentAlignment="Center"
-                                                 MinHeight="30"
-                                                 Margin="2"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
-
-                <TextBlock TextWrapping="Wrap" Foreground="#6B7280" FontSize="12" Margin="0,8,0,0"
-                           Text="La primera vez se registra el pago (reserva abierta). Si la factura ya existe, se actualizan los datos y el PDF. «Solo descargar» abre el PDF sin recalcular."/>
-
-                <TextBlock Margin="0,16,0,0" HorizontalAlignment="Center" Text="Cargando…">
+                <TextBlock Text="Extras de la habitación" FontWeight="SemiBold" Margin="0,12,0,4"/>
+                <TextBlock Text="Si la habitación no tiene extras, la tabla puede quedar vacía."
+                           Foreground="#6B7280" FontSize="12" Margin="0,0,0,6">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                <DataTrigger Binding="{Binding ShowExtrasEmptyHint}" Value="True">
                                     <Setter Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
+
+                <Grid Margin="6,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ListView x:Name="ExtrasListView"
+                              Grid.Column="0"
+                              ItemsSource="{Binding ExtraRows}"
+                              AlternationCount="2"
+                              ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
+                              BorderThickness="0.5"
+                              MinHeight="120"
+                              MaxHeight="280"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              Focusable="False"
+                              SizeChanged="ExtrasList_SizeChanged">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Concepto" Width="260" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" Padding="6,3" VerticalAlignment="Center" MinHeight="22" Margin="2"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Cant." Width="72" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Quantity}" Padding="6,3" VerticalAlignment="Center" MinHeight="22" Margin="2"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="€ / u." Width="138" HeaderContainerStyle="{StaticResource TableHeader}">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding UnitPrice, StringFormat={}{0:N2}}" Padding="6,3" VerticalAlignment="Center" MinHeight="22" Margin="2"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
             </StackPanel>
         </ScrollViewer>
     </Grid>

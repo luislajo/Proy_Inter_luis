@@ -37,10 +37,6 @@
             <Button Content="Volver" Style="{StaticResource RedReturnBtn}" Command="{Binding ReturnCommand}"/>
             <Button Content="Guardar" Style="{StaticResource SaveBtn}" Command="{Binding SaveCommand}"/>
             <Button Content="Cancelar" Style="{StaticResource CancelBtn}" Command="{Binding CancelCommand}" IsEnabled="{Binding Disabled}"/>
-            <Button Content="Checkout y pagar"
-                    Style="{StaticResource SaveBtn}"
-                    Command="{Binding CheckoutPayCommand}"
-                    IsEnabled="{Binding Disabled}"/>
             <Button Content="Descargar factura"
                     Style="{StaticResource SaveBtn}"
                     Command="{Binding DownloadInvoiceCommand}"

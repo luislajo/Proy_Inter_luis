@@ -87,6 +87,8 @@ const bookingDatabaseSchema = new Schema({
     },
     invoiceBreakdown: {
         nightsSubtotal: { type: Number, default: null },
+        nightsListSubtotal: { type: Number, default: null },
+        offerPercent: { type: Number, default: 0 },
         extrasSubtotal: { type: Number, default: 0 },
         discountAmount: { type: Number, default: 0 },
         taxRate: { type: Number, default: 21 },

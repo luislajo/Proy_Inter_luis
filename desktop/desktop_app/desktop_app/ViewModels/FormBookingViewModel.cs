@@ -229,10 +229,8 @@ namespace desktop_app.ViewModels
         public ICommand CancelCommand { get; }
 
         /// <summary>
-        /// Comando para emular el checkout/pago y generar factura en el backend.
+        /// Comando para descargar o preparar factura.
         /// </summary>
-        public ICommand CheckoutPayCommand { get; }
-
         public ICommand DownloadInvoiceCommand { get; }
 
 
@@ -250,7 +248,6 @@ namespace desktop_app.ViewModels
 
             SaveCommand = new RelayCommand(async _ => await Save());
             CancelCommand = new RelayCommand(async _ => await Cancel());
-            CheckoutPayCommand = new RelayCommand(_ => NavigateToInvoicePrepare());
             DownloadInvoiceCommand = new RelayCommand(_ => NavigateToInvoicePrepare());
 
             LoadClients();

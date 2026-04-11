@@ -45,6 +45,9 @@ namespace desktop_app.Models
         [JsonPropertyName("invoiceIssuer")]
         public InvoiceIssuerDto? InvoiceIssuer { get; set; }
 
+        [JsonPropertyName("invoiceCompany")]
+        public InvoiceIssuerDto? InvoiceCompany { get; set; }
+
         [JsonIgnore] 
         public string RoomNumber { get; set; } = "";
 

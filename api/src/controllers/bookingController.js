@@ -17,9 +17,11 @@ const INVOICE_PREFIX = process.env.INVOICE_PREFIX ?? "FAC";
 const INVOICE_SEPARATOR = process.env.INVOICE_SEPARATOR ?? "-";
 const INVOICE_SEQUENCE_PADDING = Number(process.env.INVOICE_SEQUENCE_PADDING ?? 6);
 const DEFAULT_TAX_RATE = Number(process.env.INVOICE_DEFAULT_TAX_RATE ?? 21);
-const HOTEL_NAME = process.env.HOTEL_NAME ?? "Hotel Intermodular";
-const HOTEL_TAX_ID = process.env.HOTEL_TAX_ID ?? "B00000000";
-const HOTEL_ADDRESS = process.env.HOTEL_ADDRESS ?? "Dirección fiscal no configurada";
+
+const HOTEL_NAME = process.env.HOTEL_NAME ?? "Hotel Pere Maria";
+const HOTEL_TAX_ID = process.env.HOTEL_TAX_ID ?? "B84729163";
+const HOTEL_ADDRESS =
+    process.env.HOTEL_ADDRESS ?? "Av. de la Marina Baixa, 15, 03502 Benidorm , Alicante";
 
 function toMoney(value) {
     return Number((Number(value || 0)).toFixed(2));
@@ -52,22 +54,59 @@ function mapExtrasFromRequestBody(body) {
         .map((extra) => ({ ...extra, total: toMoney(extra.quantity * extra.unitPrice) }));
 }
 
-function applyInvoiceMath(booking, mappedExtras, body) {
-    const nightsSubtotal = toMoney(booking.totalNights * booking.pricePerNight);
+/**
+ * Descuento de noches = % de oferta de la habitación (room.offer) sobre tarifa de catálogo.
+ * El importe cobrado por noche (booking.pricePerNight) ya incorpora ese descuento.
+ */
+function applyInvoiceMath(booking, mappedExtras, body, room) {
     const extrasSubtotal = toMoney(mappedExtras.reduce((acc, extra) => acc + extra.total, 0));
-    const discountAmount = toMoney(Number(body?.discountAmount ?? 0));
+    const offerPercent = Math.min(100, Math.max(0, Number(room?.offer ?? booking.offer ?? 0)));
+    const listPricePerNight =
+        room?.pricePerNight != null
+            ? toMoney(room.pricePerNight)
+            : offerPercent > 0 && offerPercent < 100
+              ? toMoney(toMoney(booking.pricePerNight) / (1 - offerPercent / 100))
+              : toMoney(booking.pricePerNight);
+    const nightsListSubtotal = toMoney(booking.totalNights * listPricePerNight);
+    const nightsSubtotal = toMoney(booking.totalNights * toMoney(booking.pricePerNight));
+    const discountAmount =
+        offerPercent > 0 ? toMoney(Math.max(0, nightsListSubtotal - nightsSubtotal)) : 0;
     const taxRate = Number(body?.taxRate ?? DEFAULT_TAX_RATE);
-    const taxableBase = Math.max(0, nightsSubtotal + extrasSubtotal - discountAmount);
+    const taxableBase = Math.max(0, nightsSubtotal + extrasSubtotal);
     const taxAmount = toMoney(taxableBase * (taxRate / 100));
     const total = toMoney(taxableBase + taxAmount);
-    return { nightsSubtotal, extrasSubtotal, discountAmount, taxRate, taxAmount, total };
+    return {
+        nightsSubtotal,
+        nightsListSubtotal,
+        offerPercent,
+        extrasSubtotal,
+        discountAmount,
+        taxRate,
+        taxAmount,
+        total
+    };
+}
+
+function renderInvoiceNightsSubtotalRows(breakdown) {
+    const disc = toMoney(breakdown.discountAmount);
+    const offerP = toMoney(breakdown.offerPercent ?? 0);
+    const listN =
+        breakdown.nightsListSubtotal != null ? toMoney(breakdown.nightsListSubtotal) : null;
+    const ns = toMoney(breakdown.nightsSubtotal);
+    if (disc > 0.005 && listN != null && listN > ns + 0.005) {
+        return `
+          <tr><td>Precio catálogo (noches):</td><td>${listN.toFixed(2)} EUR</td></tr>
+          <tr><td>Descuento habitación (${offerP.toFixed(0)} %):</td><td>- ${disc.toFixed(2)} EUR</td></tr>
+          <tr><td>Subtotal noches:</td><td>${ns.toFixed(2)} EUR</td></tr>`;
+    }
+    return `<tr><td>Subtotal noches:</td><td>${ns.toFixed(2)} EUR</td></tr>`;
 }
 
 function renderCompanySection(company) {
     if (!company?.name) return "";
     return `
     <div class="section">
-      <h3>Datos de empresa</h3>
+      <p class="section-title">Datos de empresa</p>
       <p><strong>Empresa:</strong> ${company.name}</p>
       <p><strong>CIF/NIF:</strong> ${company.taxId || "-"}</p>
       <p><strong>Dirección:</strong> ${company.address || "-"}</p>
@@ -118,66 +157,59 @@ function buildInvoiceHtml({ booking, client, room }) {
       <head>
         <meta charset="utf-8" />
         <style>
-          body { font-family: Arial, sans-serif; color: #222; margin: 28px; }
-          .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-          .section { margin-bottom: 16px; }
-          .box { border: 1px solid #ddd; border-radius: 6px; padding: 10px; }
-          h1 { margin: 0; font-size: 24px; }
-          h3 { margin: 0 0 8px 0; }
-          p { margin: 4px 0; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background: #f6f6f6; }
-          .totals { margin-top: 14px; width: 320px; margin-left: auto; }
-          .totals td { border: none; padding: 4px 0; }
-          .totals tr.total td { font-size: 18px; font-weight: bold; border-top: 1px solid #ccc; padding-top: 8px; }
-          .header-main { display: flex; align-items: flex-start; gap: 18px; flex: 1; min-width: 0; }
-          .invoice-logo { max-height: 72px; max-width: 200px; object-fit: contain; display: block; filter: brightness(0); }
+          body { font-family: Arial, sans-serif; color: #000; font-size: 12px; margin: 24px; line-height: 1.35; }
+          .section { margin-bottom: 14px; }
+          .section-title { font-weight: bold; margin: 0 0 6px 0; }
+          p { margin: 2px 0; }
+          .title-row { margin-bottom: 12px; }
+          .title-row h1 { margin: 0 0 4px 0; font-size: 16px; font-weight: bold; }
+          .invoice-logo { max-height: 80px; max-width: 260px; object-fit: contain; display: block; margin-bottom: 10px; }
+          table.extras { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+          table.extras th, table.extras td { border-bottom: 1px solid #999; padding: 4px 6px 4px 0; text-align: left; }
+          table.extras th { font-weight: bold; border-bottom: 1px solid #000; }
+          .totals { margin-top: 12px; width: 280px; margin-left: auto; border-collapse: collapse; font-size: 12px; }
+          .totals td { padding: 2px 0; border: none; }
+          .totals tr.total td { font-weight: bold; border-top: 1px solid #000; padding-top: 6px; }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="header-main">
-            ${logoBlock}
-            <div>
-            <h1>Factura ${booking.invoice_number || "-"}</h1>
-            <p><strong>Fecha:</strong> ${formatDate(booking.invoiceDate || booking.payDate || new Date())}</p>
-            </div>
-          </div>
-          <div class="box">
-            <p><strong>${escapeHtml(booking.invoiceIssuer?.name || HOTEL_NAME)}</strong></p>
-            <p>NIF: ${escapeHtml(booking.invoiceIssuer?.taxId || HOTEL_TAX_ID)}</p>
-            <p>${escapeHtml(booking.invoiceIssuer?.address || HOTEL_ADDRESS)}</p>
-          </div>
+        ${logoBlock}
+        <div class="title-row">
+          <h1>Factura ${booking.invoice_number || "-"}</h1>
+          <p>Fecha: ${formatDate(booking.invoiceDate || booking.payDate || new Date())}</p>
         </div>
 
-        <div class="section box">
-          <h3>Datos del cliente</h3>
-          <p><strong>Nombre:</strong> ${client?.firstName || ""} ${client?.lastName || ""}</p>
-          <p><strong>Email:</strong> ${client?.email || "-"}</p>
-          <p><strong>DNI:</strong> ${client?.dni || "-"}</p>
-          <p><strong>Ciudad fiscal:</strong> ${client?.cityName || "-"}</p>
+        <div class="section">
+          <p class="section-title">Emisor</p>
+          <p>${escapeHtml(HOTEL_NAME)}</p>
+          <p>NIF: ${escapeHtml(HOTEL_TAX_ID)}</p>
+          <p>${escapeHtml(HOTEL_ADDRESS)}</p>
+        </div>
+
+        <div class="section">
+          <p class="section-title">Cliente</p>
+          <p>${client?.firstName || ""} ${client?.lastName || ""}</p>
+          <p>Email: ${client?.email || "-"} · DNI: ${client?.dni || "-"}</p>
+          <p>Ciudad fiscal: ${client?.cityName || "-"}</p>
         </div>
 
         ${renderCompanySection(booking.invoiceCompany)}
 
-        <div class="section box">
-          <h3>Detalle de estancia</h3>
-          <p><strong>Habitación:</strong> ${room?.roomNumber || "-"} (${room?.type || "-"})</p>
-          <p><strong>Extras de la habitación:</strong> ${Array.isArray(room?.extras) && room.extras.length ? escapeHtml(room.extras.join(", ")) : "—"}</p>
-          <p><strong>Fechas:</strong> ${formatDate(booking.checkInDate)} - ${formatDate(booking.checkOutDate)}</p>
-          <p><strong>Noches:</strong> ${booking.totalNights}</p>
-          <p><strong>Precio por noche:</strong> ${toMoney(booking.pricePerNight).toFixed(2)} EUR</p>
+        <div class="section">
+          <p class="section-title">Estancia</p>
+          <p>Habitación ${room?.roomNumber || "-"} (${room?.type || "-"})</p>
+          <p>Extras habitación: ${Array.isArray(room?.extras) && room.extras.length ? escapeHtml(room.extras.join(", ")) : "—"}</p>
+          <p>${formatDate(booking.checkInDate)} – ${formatDate(booking.checkOutDate)} · ${booking.totalNights} noches · ${toMoney(booking.pricePerNight).toFixed(2)} EUR/noche</p>
         </div>
 
         <div class="section">
-          <h3>Extras</h3>
-          <table>
+          <p class="section-title">Extras facturados</p>
+          <table class="extras">
             <thead>
               <tr>
                 <th>Concepto</th>
-                <th>Cantidad</th>
-                <th>Precio unitario</th>
+                <th>Cant.</th>
+                <th>P. unit.</th>
                 <th>Total</th>
               </tr>
             </thead>
@@ -188,10 +220,9 @@ function buildInvoiceHtml({ booking, client, room }) {
         </div>
 
         <table class="totals">
-          <tr><td>Subtotal noches:</td><td>${toMoney(breakdown.nightsSubtotal).toFixed(2)} EUR</td></tr>
+          ${renderInvoiceNightsSubtotalRows(breakdown)}
           <tr><td>Subtotal extras:</td><td>${toMoney(breakdown.extrasSubtotal).toFixed(2)} EUR</td></tr>
-          <tr><td>Descuentos:</td><td>- ${toMoney(breakdown.discountAmount).toFixed(2)} EUR</td></tr>
-          <tr><td>Impuestos (${toMoney(breakdown.taxRate).toFixed(2)} %):</td><td>${toMoney(breakdown.taxAmount).toFixed(2)} EUR</td></tr>
+          <tr><td>IVA (${toMoney(breakdown.taxRate).toFixed(2)} %):</td><td>${toMoney(breakdown.taxAmount).toFixed(2)} EUR</td></tr>
           <tr class="total"><td>Total:</td><td>${toMoney(breakdown.total).toFixed(2)} EUR</td></tr>
         </table>
       </body>
@@ -613,7 +644,8 @@ export async function payBooking(req, res) {
         }
 
         const mappedExtras = mapExtrasFromRequestBody(req.body);
-        const calc = applyInvoiceMath(booking, mappedExtras, req.body);
+        const room = await roomDatabaseModel.findById(booking.room).lean();
+        const calc = applyInvoiceMath(booking, mappedExtras, req.body, room);
 
         if (!booking.invoice_number) {
             booking.invoice_number = await generateNextInvoiceNumber();
@@ -621,9 +653,9 @@ export async function payBooking(req, res) {
         }
 
         booking.invoiceIssuer = {
-            name: req.body?.issuer?.name?.trim() || null,
-            taxId: req.body?.issuer?.taxId?.trim() || null,
-            address: req.body?.issuer?.address?.trim() || null
+            name: HOTEL_NAME,
+            taxId: HOTEL_TAX_ID,
+            address: HOTEL_ADDRESS
         };
         booking.invoiceCompany = {
             name: req.body?.company?.name || null,
@@ -632,6 +664,8 @@ export async function payBooking(req, res) {
         };
         booking.invoiceBreakdown = {
             nightsSubtotal: calc.nightsSubtotal,
+            nightsListSubtotal: calc.nightsListSubtotal,
+            offerPercent: calc.offerPercent,
             extrasSubtotal: calc.extrasSubtotal,
             discountAmount: calc.discountAmount,
             taxRate: calc.taxRate,
@@ -672,7 +706,7 @@ export async function payBooking(req, res) {
 }
 
 /**
- * Actualiza datos de una factura ya generada (emisor, empresa facturada, extras, IVA) para reflejarlos en el PDF.
+ * Actualiza datos de una factura ya generada (empresa facturada, extras, IVA). El emisor es fijo en servidor.
  * Requiere que exista invoice_number. Admin / Trabajador.
  */
 export async function patchBookingInvoice(req, res) {
@@ -687,12 +721,13 @@ export async function patchBookingInvoice(req, res) {
         }
 
         const mappedExtras = mapExtrasFromRequestBody(req.body);
-        const calc = applyInvoiceMath(booking, mappedExtras, req.body);
+        const room = await roomDatabaseModel.findById(booking.room).lean();
+        const calc = applyInvoiceMath(booking, mappedExtras, req.body, room);
 
         booking.invoiceIssuer = {
-            name: req.body?.issuer?.name?.trim() || null,
-            taxId: req.body?.issuer?.taxId?.trim() || null,
-            address: req.body?.issuer?.address?.trim() || null
+            name: HOTEL_NAME,
+            taxId: HOTEL_TAX_ID,
+            address: HOTEL_ADDRESS
         };
         booking.invoiceCompany = {
             name: req.body?.company?.name || null,
@@ -701,6 +736,8 @@ export async function patchBookingInvoice(req, res) {
         };
         booking.invoiceBreakdown = {
             nightsSubtotal: calc.nightsSubtotal,
+            nightsListSubtotal: calc.nightsListSubtotal,
+            offerPercent: calc.offerPercent,
             extrasSubtotal: calc.extrasSubtotal,
             discountAmount: calc.discountAmount,
             taxRate: calc.taxRate,

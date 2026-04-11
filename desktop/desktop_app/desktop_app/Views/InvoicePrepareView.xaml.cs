@@ -16,12 +16,12 @@ namespace desktop_app.Views
         /// </summary>
         private void ExtrasList_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (sender is not ListView listView || listView.View is not GridView gridView || gridView.Columns.Count < 4)
+            if (sender is not ListView listView || listView.View is not GridView gridView || gridView.Columns.Count < 3)
                 return;
 
-            const double fixedCols = 52 + 72 + 88 + 24;
+            const double fixedCols = 72 + 88 + 24;
             double available = listView.ActualWidth - fixedCols - 28;
-            gridView.Columns[1].Width = Math.Max(160, available);
+            gridView.Columns[0].Width = Math.Max(160, available);
         }
     }
 }

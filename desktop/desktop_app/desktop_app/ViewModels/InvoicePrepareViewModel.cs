@@ -47,22 +47,17 @@ namespace desktop_app.ViewModels
     /// </summary>
     public class InvoicePrepareViewModel : ViewModelBase
     {
+        public const decimal FixedTaxRate = 21m;
+
         private readonly string _bookingId;
         private readonly bool _returnToFormBooking;
 
         private bool _isLoading = true;
         private bool _hasExistingInvoice;
 
-        private string _issuerName = "";
-        private string _issuerTaxId = "";
-        private string _issuerAddress = "";
-
         private string _companyName = "";
         private string _companyTaxId = "";
         private string _companyAddress = "";
-
-        private decimal _discountAmount;
-        private decimal _taxRate = 21m;
 
         private string _roomSummary = "";
 
@@ -116,23 +111,7 @@ namespace desktop_app.ViewModels
             set => SetProperty(ref _roomSummary, value);
         }
 
-        public string IssuerName
-        {
-            get => _issuerName;
-            set => SetProperty(ref _issuerName, value);
-        }
-
-        public string IssuerTaxId
-        {
-            get => _issuerTaxId;
-            set => SetProperty(ref _issuerTaxId, value);
-        }
-
-        public string IssuerAddress
-        {
-            get => _issuerAddress;
-            set => SetProperty(ref _issuerAddress, value);
-        }
+        public bool ShowExtrasEmptyHint => ExtraRows.Count == 0;
 
         public string CompanyName
         {
@@ -152,17 +131,7 @@ namespace desktop_app.ViewModels
             set => SetProperty(ref _companyAddress, value);
         }
 
-        public decimal DiscountAmount
-        {
-            get => _discountAmount;
-            set => SetProperty(ref _discountAmount, value);
-        }
-
-        public decimal TaxRate
-        {
-            get => _taxRate;
-            set => SetProperty(ref _taxRate, value);
-        }
+        public decimal TaxRate => FixedTaxRate;
 
         public ICommand BackCommand { get; }
 
@@ -189,11 +158,11 @@ namespace desktop_app.ViewModels
 
                 HasExistingInvoice = !string.IsNullOrWhiteSpace(booking.InvoiceNumber);
 
-                if (booking.InvoiceIssuer != null)
+                if (booking.InvoiceCompany != null)
                 {
-                    IssuerName = booking.InvoiceIssuer.Name ?? "";
-                    IssuerTaxId = booking.InvoiceIssuer.TaxId ?? "";
-                    IssuerAddress = booking.InvoiceIssuer.Address ?? "";
+                    CompanyName = booking.InvoiceCompany.Name ?? "";
+                    CompanyTaxId = booking.InvoiceCompany.TaxId ?? "";
+                    CompanyAddress = booking.InvoiceCompany.Address ?? "";
                 }
 
                 var room = await RoomService.GetRoomByIdAsync(booking.Room);
@@ -211,9 +180,12 @@ namespace desktop_app.ViewModels
                     if (room.Crib)
                         ExtraRows.Add(new InvoiceExtraRow { Name = "Cuna", Quantity = 1, UnitPrice = 15m, Include = true });
                 }
+                else
+                {
+                    // Si no se puede cargar la habitación, igualmente permitimos continuar.
+                }
 
-                if (ExtraRows.Count == 0)
-                    ExtraRows.Add(new InvoiceExtraRow { Name = "Extra", Quantity = 1, UnitPrice = 0m, Include = false });
+                OnPropertyChanged(nameof(ShowExtrasEmptyHint));
             }
             catch (Exception ex)
             {
@@ -235,12 +207,6 @@ namespace desktop_app.ViewModels
 
             return new
             {
-                issuer = new
-                {
-                    name = string.IsNullOrWhiteSpace(IssuerName) ? null : IssuerName.Trim(),
-                    taxId = string.IsNullOrWhiteSpace(IssuerTaxId) ? null : IssuerTaxId.Trim(),
-                    address = string.IsNullOrWhiteSpace(IssuerAddress) ? null : IssuerAddress.Trim()
-                },
                 company = new
                 {
                     name = string.IsNullOrWhiteSpace(CompanyName) ? null : CompanyName.Trim(),
@@ -248,8 +214,7 @@ namespace desktop_app.ViewModels
                     address = string.IsNullOrWhiteSpace(CompanyAddress) ? null : CompanyAddress.Trim()
                 },
                 extras,
-                discountAmount = (double)DiscountAmount,
-                taxRate = (double)TaxRate
+                taxRate = (double)FixedTaxRate
             };
         }
 
