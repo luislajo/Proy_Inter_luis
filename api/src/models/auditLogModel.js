@@ -1,3 +1,6 @@
+/**
+ * @file Esquema Mongoose `audit_log`: trazas inmutables de cambios en reservas y habitaciones (y acciones relacionadas).
+ */
 import { Schema, Types, model } from 'mongoose';
 
 /**

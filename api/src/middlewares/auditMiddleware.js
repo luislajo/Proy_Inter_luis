@@ -1,3 +1,6 @@
+/**
+ * @file Middleware que envuelve `res.json` en PATCH/DELETE para escribir `audit_log` tras respuesta 2xx.
+ */
 import { auditLogModel } from '../models/auditLogModel.js';
 import { bookingDatabaseModel } from '../models/bookingModel.js';
 import { roomDatabaseModel } from '../models/roomsModel.js';
@@ -62,10 +65,10 @@ export function auditMiddleware(entityType, paramName = 'id') {
 }
 
 /**
- * Determina la acción de auditoría según el método HTTP y la URL
- * @param {string} method - Método HTTP (PATCH, DELETE, etc.)
- * @param {string} url - URL original de la petición
- * @returns {"UPDATE"|"CANCEL"|"DELETE"|"PAYMENT"}
+ * Determina la acción de auditoría según método HTTP y ruta (cancelación por segmento `/cancel`).
+ * @param {string} method - Método HTTP (`PATCH`, `DELETE`, …).
+ * @param {string} url - `req.originalUrl`.
+ * @returns {"UPDATE"|"CANCEL"|"DELETE"}
  */
 function determineAction(method, url) {
     if (method === 'DELETE') return 'DELETE';

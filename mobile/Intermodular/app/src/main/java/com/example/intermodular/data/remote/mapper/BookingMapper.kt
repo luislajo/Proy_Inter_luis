@@ -31,6 +31,7 @@ fun BookingDto.toDomain() : Booking {
         offer = offer,
         status = status,
         guests = guests,
-        totalNights = totalNights
+        totalNights = totalNights,
+        invoiceNumber = invoice_number
     )
 }

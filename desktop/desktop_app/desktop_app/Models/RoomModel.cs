@@ -72,6 +72,21 @@ namespace desktop_app.Models
         [JsonPropertyName("isAvailable")]
         public bool IsAvailable { get; set; }
 
+        /// <summary>Estado operativo actual (available/occupied/cleaning/maintenance/blocked).</summary>
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = "available";
+
+        [JsonIgnore]
+        public string StatusLabel => Status switch
+        {
+            "available" => "Disponible",
+            "occupied" => "Ocupada",
+            "cleaning" => "Limpieza",
+            "maintenance" => "Mantenimiento",
+            "blocked" => "Bloqueada",
+            _ => Status
+        };
+
         /// <summary>Valoración media (0-5).</summary>
         [JsonPropertyName("rate")]
         public double Rate { get; set; }

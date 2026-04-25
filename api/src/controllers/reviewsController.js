@@ -1,8 +1,13 @@
 import { reviewDatabaseModel } from "../models/reviewsModel.js";
 
 /**
- * Crea una nueva reseña
- * POST /review
+ * Crea una reseña vinculada a usuario, habitación y reserva.
+ *
+ * @async
+ * @function createReview
+ * @param {import("express").Request} req - Body: `user`, `room`, `booking`, `rating`, `description`.
+ * @param {import("express").Response} res
+ * @returns {Promise}
  */
 export async function createReview(req, res) {
     try {
@@ -33,8 +38,13 @@ export async function createReview(req, res) {
 }
 
 /**
- * Obtiene todas las reseñas
- * GET /review
+ * Lista todas las reseñas con populate de usuario, habitación y reserva.
+ *
+ * @async
+ * @function getReviews
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @returns {Promise}
  */
 export async function getReviews(req, res) {
     try {
@@ -50,8 +60,13 @@ export async function getReviews(req, res) {
 }
 
 /**
- * Obtiene una reseña por ID
- * GET /review/:reviewID
+ * Obtiene una reseña por `reviewID` con datos relacionados poblados.
+ *
+ * @async
+ * @function getReviewById
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @returns {Promise}
  */
 export async function getReviewById(req, res) {
     try {
@@ -73,8 +88,13 @@ export async function getReviewById(req, res) {
 }
 
 /**
- * Obtiene reseñas por habitación
- * GET /review/room/:roomID
+ * Lista reseñas de una habitación (`roomID`).
+ *
+ * @async
+ * @function getReviewsByRoom
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @returns {Promise}
  */
 export async function getReviewsByRoom(req, res) {
     try {
@@ -90,8 +110,13 @@ export async function getReviewsByRoom(req, res) {
 }
 
 /**
- * Obtiene reseñas por usuario
- * GET /review/user/:userID
+ * Lista reseñas de un usuario (`userID`).
+ *
+ * @async
+ * @function getReviewsByUser
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @returns {Promise}
  */
 export async function getReviewsByUser(req, res) {
     try {
@@ -107,8 +132,13 @@ export async function getReviewsByUser(req, res) {
 }
 
 /**
- * Elimina una reseña
- * DELETE /review/:reviewID
+ * Elimina una reseña por `reviewID`.
+ *
+ * @async
+ * @function deleteReview
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @returns {Promise}
  */
 export async function deleteReview(req, res) {
     try {

@@ -1,5 +1,6 @@
 ﻿package com.example.intermodular.views.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,10 +15,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import com.example.intermodular.models.Booking
 import com.example.intermodular.models.Room
-import com.example.intermodular.viewmodels.BookingViewModel
 import com.example.intermodular.viewmodels.MyBookingsViewModel
 import com.example.intermodular.views.components.BookingCard
 
@@ -35,6 +36,8 @@ import com.example.intermodular.views.components.BookingCard
  * @param bookings - Lista de todas las reservas
  * @param rooms - Lista de todas las habitaciones
  * @param onDetailsButtonClick - Callback para evento click en el botón "Ver detalles"
+ * @param invoiceOpening - Descarga de factura en curso (superposición ligera)
+ * @param onOpenInvoice - Abre el PDF de factura para el id de reserva indicado
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,55 +46,78 @@ fun MyBookingsScreen(
     error : String?,
     bookings : List<Booking>,
     rooms : List<Room>,
-    onDetailsButtonClick: (String) -> Unit
+    onDetailsButtonClick: (String) -> Unit,
+    invoiceOpening: Boolean = false,
+    onOpenInvoice: (String) -> Unit = { _ -> }
 ) {
-    Column (
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // ESTADO DE CARGA
-        if (loading) {
-            Box (
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column (
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // ESTADO DE CARGA
+            if (loading) {
+                Box (
+                    modifier = Modifier
+                        .fillMaxSize()
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // MENSAJE DE ERROR
+            error?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+
+            // MENSAJE DE AUSENCIA DE RESERVAS
+            if (bookings.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No se han encontrado reservas anteriores",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // LISTA DE RESERVAS
+            LazyColumn {
+                items(bookings.size) { i ->
+                    val booking = bookings[i]
+                    val room = rooms.find { room -> booking.roomId == room.id }
+                    if (room != null) {
+                        BookingCard(
+                            booking = booking,
+                            room = room,
+                            onDetailsButtonClick = onDetailsButtonClick,
+                            onInvoiceClick = if (booking.invoiceNumber != null) {
+                                { onOpenInvoice(booking.id) }
+                            } else null
+                        )
+                    }
+                }
+            }
+        }
+
+        if (invoiceOpening) {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-            ) {
-                CircularProgressIndicator(
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-
-        // MENSAJE DE ERROR
-        error?.let {
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
-
-        // MENSAJE DE AUSENCIA DE RESERVAS
-        if (bookings.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "No se han encontrado reservas anteriores",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // LISTA DE RESERVAS
-        LazyColumn {
-            items(bookings.size) { i ->
-                BookingCard(
-                    booking = bookings[i],
-                    room = rooms.find { room ->  bookings[i].roomId == room.id }!!,
-                    onDetailsButtonClick = onDetailsButtonClick
-                )
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -117,10 +143,12 @@ fun MyBookingsScreenState(
     viewModel: MyBookingsViewModel,
     navController: NavHostController
 ) {
+    val context = LocalContext.current
     val bookings by viewModel.bookings.collectAsStateWithLifecycle()
     val loading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.errorMessage.collectAsStateWithLifecycle()
     val rooms by viewModel.rooms.collectAsStateWithLifecycle()
+    val invoiceOpening by viewModel.invoiceOpening.collectAsStateWithLifecycle()
 
     MyBookingsScreen(
         loading = loading,
@@ -129,6 +157,8 @@ fun MyBookingsScreenState(
         rooms = rooms,
         onDetailsButtonClick = { bookingId ->
             navController.navigate("details/$bookingId")
-        }
+        },
+        invoiceOpening = invoiceOpening,
+        onOpenInvoice = { bookingId -> viewModel.openInvoicePdf(bookingId, context) }
     )
 }

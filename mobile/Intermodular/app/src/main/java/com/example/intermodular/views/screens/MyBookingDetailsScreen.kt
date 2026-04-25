@@ -1,5 +1,6 @@
 ﻿package com.example.intermodular.views.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -93,13 +95,16 @@ fun MyBookingDetailsScreen(
     onGuestsChange: (String) -> Unit,
     onCreateReviewClick: () -> Unit,
     onReviewDescriptionChange: (String) -> Unit,
-    onRatingChange: (Int) -> Unit
+    onRatingChange: (Int) -> Unit,
+    invoiceOpening: Boolean = false,
+    onOpenInvoice: () -> Unit = {}
 ) {
     LaunchedEffect(navigateToPayment) {
         navigateToPayment?.let {
             onNavigateToPayment(it)
         }
     }
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -192,6 +197,16 @@ fun MyBookingDetailsScreen(
                         Text("Cancelar reserva")
                     }
 
+                    if (booking?.invoiceNumber != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = onOpenInvoice,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Ver factura (PDF)")
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(30.dp))
 
 
@@ -255,6 +270,18 @@ fun MyBookingDetailsScreen(
             }
         }
     }
+
+        if (invoiceOpening) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
 }
 
 /**
@@ -273,6 +300,7 @@ fun MyBookingDetailsState(
     viewModel: MyBookingDetailsViewModel,
     onNavigateToPayment: (String) -> Unit
 ) {
+    val context = LocalContext.current
     val loading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.errorMessage.collectAsStateWithLifecycle()
     val room by viewModel.room.collectAsStateWithLifecycle()
@@ -281,6 +309,7 @@ fun MyBookingDetailsState(
     val reviewRate by viewModel.reviewRating.collectAsStateWithLifecycle()
     val reviewCreated by viewModel.reviewCreated.collectAsStateWithLifecycle()
     val navigateToPayment by viewModel.navigateToPayment.collectAsStateWithLifecycle()
+    val invoiceOpening by viewModel.invoiceOpening.collectAsStateWithLifecycle()
 
     MyBookingDetailsScreen(
         loading = loading,
@@ -305,6 +334,8 @@ fun MyBookingDetailsState(
         onGuestsChange = viewModel::onGuestsChange,
         onReviewDescriptionChange = viewModel::onReviewDescriptionChange,
         onRatingChange = viewModel::onRatingChange,
-        onCreateReviewClick = viewModel::createReview
+        onCreateReviewClick = viewModel::createReview,
+        invoiceOpening = invoiceOpening,
+        onOpenInvoice = { viewModel.openInvoicePdf(context) }
     )
 }

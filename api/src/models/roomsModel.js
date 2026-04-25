@@ -45,8 +45,20 @@ const roomDatabaseSchema = new Schema({
   extraImages: { type: [String], default: [] },
 
   // ---- Defaults ----
+  status: {
+    type: String,
+    enum: ["available", "occupied", "cleaning", "maintenance", "blocked"],
+    default: "available",
+    required: true
+  },
   isAvailable: { type: Boolean, default: true },
   rate: { type: Number, default: 0, min: 0, max: 5 },
+});
+
+roomDatabaseSchema.pre("validate", function () {
+  if (this.status) {
+    this.isAvailable = this.status === "available";
+  }
 });
 
 export const roomDatabaseModel = model("room", roomDatabaseSchema);

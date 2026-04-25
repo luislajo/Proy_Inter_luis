@@ -1,3 +1,6 @@
+/**
+ * @file Router de reservas: CRUD, pago/factura, PDF y auditoría por ID (prefijo en `server`, p. ej. `/booking`).
+ */
 import { Router } from "express";
 import {
     getOneBookingById,

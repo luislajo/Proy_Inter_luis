@@ -1,3 +1,6 @@
+/**
+ * @file Punto de entrada Express: middleware global, estáticos, montaje de routers y arranque (DB, email, job finalización reservas).
+ */
 import express from "express";
 import dotenv from "dotenv";
 import cors from 'cors';
@@ -40,7 +43,7 @@ const UPLOADS_DIR = path.join(__dirname, "../uploads");
 app.use("/uploads", express.static(UPLOADS_DIR));
 
 app.use("/booking", bookingRouter);
-app.use("/bookings", bookingRouter);
+//app.use("/bookings", bookingRouter);
 app.use("/room", roomsRouter);
 app.use("/user", usersRouter);
 app.use("/auth", authRouter);

@@ -26,10 +26,14 @@ object RetrofitProvider {
             .add(KotlinJsonAdapterFactory())
             .build()
 
-    private fun okHttpClient(): OkHttpClient =
+    /**
+     * Cliente HTTP compartido (auth, timeouts). Misma instancia que usa Retrofit.
+     */
+    val httpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(SessionManager))
             .build()
+    }
 
     /**
      * Configura y devuelve una instancia de Retrofit para la conexión a la API
@@ -38,7 +42,7 @@ object RetrofitProvider {
     private fun retrofit(): Retrofit =
         Retrofit.Builder()
             .baseUrl(BuildConfig.BASE_URL)
-            .client(okHttpClient())
+            .client(httpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi()))
             .build()
 

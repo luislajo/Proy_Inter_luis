@@ -8,5 +8,7 @@ data class AuditHistoryEntry(
     val id: String,
     val actionLabel: String,
     val dateTimeText: String,
-    val isPayment: Boolean
+    val isPayment: Boolean,
+    /** Id de reserva cuando el log está asociado a una reserva (p. ej. pago). */
+    val bookingId: String? = null
 )

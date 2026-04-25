@@ -23,16 +23,36 @@ const HOTEL_TAX_ID = process.env.HOTEL_TAX_ID ?? "B84729163";
 const HOTEL_ADDRESS =
     process.env.HOTEL_ADDRESS ?? "Av. de la Marina Baixa, 15, 03502 Benidorm , Alicante";
 
+/**
+ * @file Controlador de reservas: CRUD, pago con factura embebida, PDF y listado `/invoices`.
+ * Helpers de cálculo y HTML de factura al inicio del archivo.
+ */
+
+/**
+ * Redondea un importe a dos decimales para totales de factura.
+ * @param {unknown} value
+ * @returns {number}
+ */
 function toMoney(value) {
     return Number((Number(value || 0)).toFixed(2));
 }
 
+/**
+ * Formatea una fecha para textos de factura (locale `es-ES`).
+ * @param {string|Date|undefined|null} dateLike
+ * @returns {string}
+ */
 function formatDate(dateLike) {
     if (!dateLike) return "";
     const d = new Date(dateLike);
     return d.toLocaleDateString("es-ES");
 }
 
+/**
+ * Escapa caracteres HTML al generar la plantilla de factura (mitiga XSS en datos mostrados).
+ * @param {unknown} s
+ * @returns {string}
+ */
 function escapeHtml(s) {
     if (s == null || s === undefined) return "";
     return String(s)
@@ -42,6 +62,11 @@ function escapeHtml(s) {
         .replace(/"/g, "&quot;");
 }
 
+/**
+ * Normaliza `body.extras` del pago o parche de factura: nombre, cantidad, precio unitario y línea total.
+ * @param {Record<string, unknown>|null|undefined} body
+ * @returns {{ name: string, quantity: number, unitPrice: number, total: number }[]}
+ */
 function mapExtrasFromRequestBody(body) {
     const extrasInput = Array.isArray(body?.extras) ? body.extras : [];
     return extrasInput
@@ -55,8 +80,23 @@ function mapExtrasFromRequestBody(body) {
 }
 
 /**
- * Descuento de noches = % de oferta de la habitación (room.offer) sobre tarifa de catálogo.
- * El importe cobrado por noche (booking.pricePerNight) ya incorpora ese descuento.
+ * Descuento de noches = % de oferta de la habitación (`room.offer`) sobre tarifa de catálogo.
+ * El importe cobrado por noche (`booking.pricePerNight`) ya incorpora ese descuento.
+ *
+ * @param {import("mongoose").Document|object} booking - Reserva con noches y precios.
+ * @param {{ name: string, quantity: number, unitPrice: number, total: number }[]} mappedExtras - Líneas extra ya mapeadas.
+ * @param {Record<string, unknown>} body - Opcional `taxRate` (porcentaje IVA); si falta usa env.
+ * @param {object|null|undefined} room - Documento habitación lean (precio catálogo y oferta).
+ * @returns {{
+ *   nightsSubtotal: number,
+ *   nightsListSubtotal: number,
+ *   offerPercent: number,
+ *   extrasSubtotal: number,
+ *   discountAmount: number,
+ *   taxRate: number,
+ *   taxAmount: number,
+ *   total: number
+ * }}
  */
 function applyInvoiceMath(booking, mappedExtras, body, room) {
     const extrasSubtotal = toMoney(mappedExtras.reduce((acc, extra) => acc + extra.total, 0));
@@ -87,6 +127,11 @@ function applyInvoiceMath(booking, mappedExtras, body, room) {
     };
 }
 
+/**
+ * Genera filas HTML de subtotal de noches; si hay descuento respecto al catálogo, muestra desglose.
+ * @param {object} breakdown - Objeto tipo `invoiceBreakdown` (subtotales y porcentaje oferta).
+ * @returns {string} Fragmento HTML (`<tr>...</tr>`).
+ */
 function renderInvoiceNightsSubtotalRows(breakdown) {
     const disc = toMoney(breakdown.discountAmount);
     const offerP = toMoney(breakdown.offerPercent ?? 0);
@@ -102,6 +147,11 @@ function renderInvoiceNightsSubtotalRows(breakdown) {
     return `<tr><td>Subtotal noches:</td><td>${ns.toFixed(2)} EUR</td></tr>`;
 }
 
+/**
+ * Bloque HTML opcional con datos de empresa del cliente (facturación B2B).
+ * @param {{ name?: string|null, taxId?: string|null, address?: string|null }|null|undefined} company
+ * @returns {string} HTML vacío si no hay nombre de empresa.
+ */
 function renderCompanySection(company) {
     if (!company?.name) return "";
     return `
@@ -136,6 +186,11 @@ function invoiceLogoImgHtml() {
     }
 }
 
+/**
+ * Construye el HTML completo de la factura para renderizarlo a PDF con Puppeteer.
+ * @param {{ booking: object, client: object|null|undefined, room: object|null|undefined }} args
+ * @returns {string}
+ */
 function buildInvoiceHtml({ booking, client, room }) {
     const breakdown = booking.invoiceBreakdown ?? {};
     const extras = Array.isArray(breakdown.extras) ? breakdown.extras : [];
@@ -229,6 +284,11 @@ function buildInvoiceHtml({ booking, client, room }) {
     </html>`;
 }
 
+/**
+ * Genera el siguiente número de factura del año en curso (`INVOICE_PREFIX`, año, secuencia acolchada).
+ * @async
+ * @returns {Promise<string>}
+ */
 async function generateNextInvoiceNumber() {
     const currentYear = new Date().getFullYear();
     const regex = new RegExp(`^${INVOICE_PREFIX}${INVOICE_SEPARATOR}${currentYear}${INVOICE_SEPARATOR}(\\d+)$`);
@@ -706,8 +766,14 @@ export async function payBooking(req, res) {
 }
 
 /**
- * Actualiza datos de una factura ya generada (empresa facturada, extras, IVA). El emisor es fijo en servidor.
- * Requiere que exista invoice_number. Admin / Trabajador.
+ * Actualiza datos de una factura ya emitida (empresa, extras, IVA). No asigna nuevo `invoice_number`.
+ * Emisor (`invoiceIssuer`) fijado en servidor. Roles Admin o Trabajador.
+ *
+ * @async
+ * @function patchBookingInvoice
+ * @param {import("express").Request} req - `params.id` reserva; body: `extras`, `taxRate`, `company`.
+ * @param {import("express").Response} res
+ * @returns {Promise}
  */
 export async function patchBookingInvoice(req, res) {
     try {
@@ -755,6 +821,15 @@ export async function patchBookingInvoice(req, res) {
     }
 }
 
+/**
+ * Devuelve la factura en PDF (HTML + Puppeteer). Cliente solo la suya; staff según política de token.
+ *
+ * @async
+ * @function getBookingInvoicePdf
+ * @param {import("express").Request} req - `params.id` de la reserva; usuario en `req.user`.
+ * @param {import("express").Response} res - `application/pdf` o JSON de error.
+ * @returns {Promise}
+ */
 export async function getBookingInvoicePdf(req, res) {
     let browser;
     try {
@@ -798,15 +873,25 @@ export async function getBookingInvoicePdf(req, res) {
     }
 }
 
+/**
+ * Escapa metacaracteres de regex para usar el string como literal en `RegExp` (p. ej. DNI en consulta).
+ * @param {unknown} s
+ * @returns {string}
+ */
 function escapeRegex(s) {
     return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
- * Historial de facturas:
- * - Usuario: solo las suyas (ignora filtros de query).
- * - Admin/Trabajador: sin query → todas las facturas con número;
- *   ?userId= → por id de cliente; ?dni= → por DNI/NIE (campo dni en users).
+ * Listado de reservas que tienen `invoice_number` (historial de facturas).
+ * - Rol Usuario: solo las propias (query ignorado).
+ * - Admin/Trabajador: todas, o filtro `?userId=` o `?dni=` (búsqueda literal de DNI/NIE en usuarios).
+ *
+ * @async
+ * @function getInvoicesByUserId
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res - JSON `{ total, invoices }`.
+ * @returns {Promise}
  */
 export async function getInvoicesByUserId(req, res) {
     try {

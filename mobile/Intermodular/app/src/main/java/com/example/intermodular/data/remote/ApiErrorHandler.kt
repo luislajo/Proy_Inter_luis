@@ -1,8 +1,10 @@
 ﻿package com.example.intermodular.data.remote
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
 import retrofit2.HttpException
+import java.io.IOException
 
 /**
  * Objeto para el manejo de los diferentes errores que pueden ocurrir en la API.
@@ -19,13 +21,25 @@ object ApiErrorHandler {
      * @return [String] - Mensaje de error legible para el usuario
      */
     fun getErrorMessage(throwable: Throwable) : String {
+        if (throwable is CancellationException) throw throwable
         throwable.printStackTrace()
         return when (throwable) {
             is HttpException -> handleHttpException(throwable)
             is java.net.ConnectException -> "Error de conexión: No se pudo conectar al servidor"
             is java.net.SocketTimeoutException -> "Tiempo de espera agotado"
-            else -> throwable.message ?: "Error desconocido"
+            is IOException -> throwable.message?.takeIf { it.isNotBlank() }
+                ?: "Error de red o al leer la respuesta"
+            else -> fallbackMessage(throwable)
         }
+    }
+
+    private fun fallbackMessage(throwable: Throwable): String {
+        val direct = throwable.message?.takeIf { it.isNotBlank() }
+        val fromCause = throwable.cause?.message?.takeIf { it.isNotBlank() }
+        if (direct != null) return direct
+        if (fromCause != null) return fromCause
+        Log.w("ApiErrorHandler", "Excepción sin mensaje: ${throwable::class.java.name}", throwable)
+        return "Error (${throwable::class.simpleName}). Comprueba la URL del servidor y la red."
     }
 
     /**

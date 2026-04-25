@@ -7,6 +7,11 @@ import com.example.intermodular.data.remote.dto.CreateBookingDto
 import com.example.intermodular.data.remote.dto.UpdateBookingDto
 import com.example.intermodular.data.remote.mapper.toDomain
 import com.example.intermodular.models.Booking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import retrofit2.HttpException
+import java.io.IOException
 
 /**
  * Repositorio encargado de gestionar las operaciones relacionadas con las reservas
@@ -44,6 +49,35 @@ class BookingRepository(
         return api.getBookingById(id).toDomain()
     }
 
+    /**
+     * Descarga los bytes del PDF de factura vía Retrofit ([ApiService.getInvoicePdf] → [okhttp3.ResponseBody]).
+     *
+     * @throws IOException Con mensaje legible (incluye cuerpo JSON `{ "error": "..." }` del servidor si existe)
+     */
+    suspend fun getInvoicePdfBytes(bookingId: String): ByteArray = withContext(Dispatchers.IO) {
+        try {
+            api.getInvoicePdf(bookingId).use { body ->
+                val bytes = body.bytes()
+                if (bytes.isEmpty()) {
+                    throw IOException("El servidor no devolvió el PDF")
+                }
+                bytes
+            }
+        } catch (e: HttpException) {
+            val errText = e.response()?.errorBody()?.string().orEmpty()
+            val apiMsg = runCatching {
+                JSONObject(errText).optString("error", "").trim()
+            }.getOrDefault("")
+            val message = when {
+                apiMsg.isNotBlank() -> apiMsg
+                e.code() == 401 -> "No autorizado. Por favor, inicia sesión nuevamente"
+                e.code() == 403 -> "Acceso prohibido"
+                e.code() == 404 -> "Reserva no encontrada"
+                else -> "Error del servidor (código ${e.code()})"
+            }
+            throw IOException(message)
+        }
+    }
 
     /**
      * Obtiene una lista de las reservas de un cliente

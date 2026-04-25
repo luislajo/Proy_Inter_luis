@@ -1,3 +1,6 @@
+/**
+ * @file Rutas `/user`: registro, listados, perfil, contraseña y borrado (según rol).
+ */
 import { Router } from 'express';
 import { getOneUserByIdOrDni, getAllUsers, getUsersByRol, register, updateUser, deleteUserById, getMe, changeMyPassword} from '../controllers/usersController.js';
 import { verifyToken ,authorizeRoles } from '../middlewares/authMiddleware.js';    

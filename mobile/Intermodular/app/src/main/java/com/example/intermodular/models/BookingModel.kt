@@ -18,6 +18,7 @@ import java.time.LocalDate
  * @param status - Estado actual: "Abierta", "Finalizada" o "Cancelada"
  * @param guests - Cantidad de huéspedes para la reserva
  * @param totalNights - Cantidad total de noches de la reserva
+ * @param invoiceNumber - Número de factura si el pago ya generó factura en el servidor; null si aún no hay factura
  */
 data class Booking(
     val id: String,
@@ -31,5 +32,6 @@ data class Booking(
     val offer: Int,
     val status: String,
     val guests: Int,
-    val totalNights: Int
+    val totalNights: Int,
+    val invoiceNumber: String? = null
 )

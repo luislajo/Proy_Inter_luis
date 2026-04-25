@@ -1,5 +1,6 @@
 package com.example.intermodular.views.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -31,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.example.intermodular.models.AuditHistoryEntry
 import com.example.intermodular.viewmodels.MyAuditHistoryViewModel
@@ -41,10 +44,13 @@ fun MyAuditHistoryScreen(
     checkInOutEntries: List<AuditHistoryEntry>,
     paymentEntries: List<AuditHistoryEntry>,
     error: String?,
+    invoiceOpening: Boolean = false,
+    onOpenInvoice: (String) -> Unit = { _ -> },
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onErrorShown: () -> Unit
 ) {
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -119,7 +125,7 @@ fun MyAuditHistoryScreen(
                     }
                 } else {
                     items(checkInOutEntries, key = { it.id }) { entry ->
-                        AuditHistoryCard(entry = entry)
+                        AuditHistoryCard(entry = entry, onInvoiceClick = null)
                     }
                 }
 
@@ -143,16 +149,37 @@ fun MyAuditHistoryScreen(
                     }
                 } else {
                     items(paymentEntries, key = { it.id }) { entry ->
-                        AuditHistoryCard(entry = entry)
+                        val bid = entry.bookingId
+                        AuditHistoryCard(
+                            entry = entry,
+                            onInvoiceClick = if (entry.isPayment && bid != null) {
+                                { onOpenInvoice(bid) }
+                            } else null
+                        )
                     }
                 }
+            }
+        }
+    }
+
+        if (invoiceOpening) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         }
     }
 }
 
 @Composable
-private fun AuditHistoryCard(entry: AuditHistoryEntry) {
+private fun AuditHistoryCard(
+    entry: AuditHistoryEntry,
+    onInvoiceClick: (() -> Unit)?
+) {
     val icon: ImageVector = if (entry.isPayment) Icons.Outlined.Payments else Icons.Outlined.Event
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -180,6 +207,11 @@ private fun AuditHistoryCard(entry: AuditHistoryEntry) {
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+            if (onInvoiceClick != null) {
+                TextButton(onClick = onInvoiceClick) {
+                    Text("Factura PDF")
+                }
+            }
         }
     }
 }
@@ -189,6 +221,7 @@ fun MyAuditHistoryScreenState(
     viewModel: MyAuditHistoryViewModel,
     navController: NavController
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val error by viewModel.errorMessage.collectAsStateWithLifecycle()
 
@@ -197,6 +230,8 @@ fun MyAuditHistoryScreenState(
         checkInOutEntries = uiState.checkInOutEntries,
         paymentEntries = uiState.paymentEntries,
         error = error,
+        invoiceOpening = uiState.invoiceOpening,
+        onOpenInvoice = { bookingId -> viewModel.openInvoicePdf(bookingId, context) },
         onBack = { navController.popBackStack() },
         onRetry = { viewModel.load() },
         onErrorShown = { viewModel.clearError() }

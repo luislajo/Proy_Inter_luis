@@ -1,3 +1,6 @@
+/**
+ * @file Configuración Multer: disco `api/uploads`, nombres únicos, tipos imagen y límite por fichero.
+ */
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -22,6 +25,7 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
+/** Instancia Multer para usar en rutas (`single` / `array`). */
 export const upload = multer({
   storage,
   fileFilter,

@@ -1,3 +1,6 @@
+/**
+ * @file Registro, consulta, actualización y borrado de usuarios; perfil y cambio de contraseña del token.
+ */
 import { userDatabaseModel, UserEntryData, UserUpdateData, UserAdminUpdateData } from "../models/usersModel.js";
 import mongoose from "mongoose";
 import { comparePassword, hashPassword } from "../services/password.service.js";
@@ -326,6 +329,15 @@ export async function deleteUserById(req, res) {
   }
 }
 
+/**
+ * Devuelve el documento del usuario autenticado (`req.user.id`).
+ *
+ * @async
+ * @function getMe
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @returns {Promise}
+ */
 export async function getMe(req, res) {
     try {
         const userId = req.user.id;
@@ -344,7 +356,15 @@ export async function getMe(req, res) {
     }
 }
 
-
+/**
+ * Cambia la contraseña del usuario autenticado tras validar la anterior.
+ *
+ * @async
+ * @function changeMyPassword
+ * @param {import("express").Request} req - Body: `oldPassword`, `newPassword`, `newPasswordR`.
+ * @param {import("express").Response} res
+ * @returns {Promise}
+ */
 export async function changeMyPassword(req, res) {
   try {
     const userId = req.user.id;

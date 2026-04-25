@@ -1,6 +1,9 @@
-
+/**
+ * @file CRUD y listado filtrado de habitaciones; integra validación con `RoomEntryData` y auditoría vía middleware en rutas.
+ */
 import { roomDatabaseModel, RoomEntryData } from "../models/roomsModel.js";
 import { auditLogModel } from "../models/auditLogModel.js";
+import { roomStatusLogModel } from "../models/roomStatusLogModel.js";
 
 /**
  * Crea una nueva habitación.
@@ -253,10 +256,13 @@ export const deleteRoom = async (req, res) => {
  */
 
 /**
- * Obtiene el listado de rooms con filtros por query params (SIN PAGINACIÓN).
+ * Obtiene el listado de rooms con filtros por query params (sin paginación).
+ *
+ * @async
+ * @function getRoomsFiltered
  * @param {import("express").Request<{}, {}, {}, RoomsQuery>} req
  * @param {import("express").Response} res
- * @returns {Promise<void>}
+ * @returns {Promise}
  */
 export const getRoomsFiltered = async (req, res) => {
   try {
@@ -354,6 +360,111 @@ export const getRoomsFiltered = async (req, res) => {
   } catch (err) {
     res.status(400).json({ message: err.message });
     return;
+  }
+};
+
+const ROOM_STATUSES = /** @type {const} */ ([
+  "available",
+  "occupied",
+  "cleaning",
+  "maintenance",
+  "blocked"
+]);
+
+/**
+ * Devuelve todas las habitaciones con su estado actual (para tablero).
+ * GET /room/status-board
+ */
+export const getRoomsStatusBoard = async (req, res) => {
+  try {
+    const rooms = await roomDatabaseModel
+      .find({}, { roomNumber: 1, type: 1, status: 1, isAvailable: 1 })
+      .sort({ roomNumber: 1 });
+    return res.status(200).json(rooms);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Actualiza solo el estado de una habitación y registra en `room_status_log`.
+ * PATCH /room/:roomID/status
+ * body: { status, reason? }
+ */
+export const patchRoomStatus = async (req, res) => {
+  try {
+    const { roomID } = req.params;
+    const statusRaw = req.body?.status;
+    const reasonRaw = req.body?.reason;
+    const estimatedRaw = req.body?.estimatedMinutes;
+
+    const status = String(statusRaw ?? "").trim().toLowerCase();
+    if (!ROOM_STATUSES.includes(/** @type {any} */ (status))) {
+      return res.status(400).json({
+        message: `status inválido. Valores: ${ROOM_STATUSES.join(", ")}`
+      });
+    }
+
+    const reason =
+      reasonRaw == null ? null : String(reasonRaw).trim().slice(0, 500);
+    if (status !== "available" && (!reason || reason.length === 0)) {
+      return res.status(400).json({
+        message: "reason requerido cuando status no es available"
+      });
+    }
+
+    const room = await roomDatabaseModel.findById(roomID);
+    if (!room) return res.status(404).json({ message: "Room no encontrada" });
+
+    const previousStatus =
+      room.status ?? (room.isAvailable ? "available" : "occupied");
+
+    if (previousStatus === status) {
+      return res.status(200).json(room);
+    }
+
+    room.status = status;
+    room.isAvailable = status === "available";
+    const updated = await room.save();
+
+    const reqUser = /** @type {any} */ (req).user || {};
+    let estimatedMinutes = null;
+    if (estimatedRaw !== undefined && estimatedRaw !== null && String(estimatedRaw).trim().length) {
+      const n = Number(estimatedRaw);
+      if (Number.isFinite(n) && n >= 0) estimatedMinutes = Math.floor(n);
+    }
+    await roomStatusLogModel.create({
+      room_id: updated._id,
+      previous_status: previousStatus ?? null,
+      new_status: status,
+      reason: reason,
+      estimated_minutes: estimatedMinutes,
+      changed_by: reqUser.id ?? null,
+      changed_by_role: reqUser.rol ?? "SYSTEM",
+      changed_at: new Date()
+    });
+
+    return res.status(200).json(updated);
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
+  }
+};
+
+/**
+ * Historial de cambios de estado de una habitación.
+ * GET /room/:roomID/status-log
+ */
+export const getRoomStatusLog = async (req, res) => {
+  try {
+    const { roomID } = req.params;
+    const items = await roomStatusLogModel
+      .find({ room_id: roomID })
+      .sort({ changed_at: -1 })
+      .limit(200)
+      .lean();
+    return res.status(200).json(items);
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
   }
 };
 

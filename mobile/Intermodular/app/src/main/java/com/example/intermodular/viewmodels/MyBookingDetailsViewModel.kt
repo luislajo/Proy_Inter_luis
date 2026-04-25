@@ -1,5 +1,6 @@
 ﻿package com.example.intermodular.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.intermodular.data.remote.ApiErrorHandler
@@ -10,6 +11,7 @@ import com.example.intermodular.models.Booking
 import com.example.intermodular.models.Review
 import com.example.intermodular.models.Room
 import com.example.intermodular.models.RoomFilter
+import com.example.intermodular.util.InvoicePdfOpener
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -81,6 +83,9 @@ class MyBookingDetailsViewModel (
     private val _navigateToPayment = MutableStateFlow<String?>(null)
     val navigateToPayment: StateFlow<String?> = _navigateToPayment
 
+    private val _invoiceOpening = MutableStateFlow(false)
+    val invoiceOpening: StateFlow<Boolean> = _invoiceOpening
+
     // ==================== MÉTODOS PÚBLICOS ====================
     /**
      * Bloque de inicio del ViewModel
@@ -147,6 +152,23 @@ class MyBookingDetailsViewModel (
      */
     fun checkOutDateToMilliseconds(): Long? {
         return _booking.value?.checkOutDate?.let { localDateToUtcMillis(it) }
+    }
+
+    fun openInvoicePdf(context: Context) {
+        viewModelScope.launch {
+            _invoiceOpening.value = true
+            _errorMessage.value = null
+            try {
+                val bytes = bookingRepository.getInvoicePdfBytes(bookingId)
+                if (!InvoicePdfOpener.openPdfFromBytes(context, bookingId, bytes)) {
+                    _errorMessage.value = "No hay ninguna aplicación para abrir el PDF"
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = ApiErrorHandler.getErrorMessage(e)
+            } finally {
+                _invoiceOpening.value = false
+            }
+        }
     }
 
     /**

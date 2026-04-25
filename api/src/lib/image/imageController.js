@@ -1,3 +1,6 @@
+/**
+ * @file Handlers HTTP para subir y eliminar imágenes en el directorio `uploads` del API.
+ */
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -7,6 +10,12 @@ const __dirname = path.dirname(__filename);
 
 const UPLOAD_DIR = path.join(__dirname, "../../../uploads");
 
+/**
+ * Respuesta tras subir un archivo con `multipart` campo `photo`.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @returns {void}
+ */
 export const uploadPhoto = (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "Falta el archivo 'photo'." });
@@ -23,6 +32,12 @@ export const uploadPhoto = (req, res) => {
 
 const MAX_TOTAL = 100 * 1024 * 1024; // 100MB total
 
+/**
+ * Subida múltiple (campo `photos`); rechaza si el tamaño total supera el máximo.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @returns {void}
+ */
 export const uploadPhotos = (req, res) => {
   const total = (req.files ?? []).reduce((acc, f) => acc + f.size, 0);
   if (total > MAX_TOTAL) {
@@ -39,7 +54,13 @@ export const uploadPhotos = (req, res) => {
   res.status(201).json({ files });
 };
 
-// DELETE /image/:filename
+/**
+ * Borra un fichero del directorio de subidas por nombre seguro (sin path traversal).
+ * @async
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @returns {Promise}
+ */
 export const deletePhoto = async (req, res) => {
   try {
     const { filename } = req.params;
@@ -68,7 +89,13 @@ export const deletePhoto = async (req, res) => {
   }
 };
 
-// (Opcional) DELETE /image  { files: ["a.jpg","b.jpg"] }
+/**
+ * Borrado en lote: body `{ files: string[] }`; cada nombre se valida con `path.basename`.
+ * @async
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @returns {Promise}
+ */
 export const deletePhotos = async (req, res) => {
   try {
     const files = Array.isArray(req.body?.files) ? req.body.files : [];

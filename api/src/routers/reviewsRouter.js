@@ -1,3 +1,6 @@
+/**
+ * @file Rutas `/review`: CRUD de reseñas por recurso o filtros habitación/usuario.
+ */
 import { Router } from "express";
 import {
     createReview,

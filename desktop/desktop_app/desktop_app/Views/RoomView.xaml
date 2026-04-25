@@ -7,156 +7,283 @@
              d:DesignHeight="650" d:DesignWidth="1200"
              Style="{StaticResource UserControlBase}">
 
-
-    <Grid>
-        <Grid Margin="22">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-
-            <!-- ================= HEADER ================= -->
-            <Border Grid.Row="0"
-                        Style="{StaticResource HeaderWrapper}">
-
+    <Grid Margin="22">
+        <TabControl Background="#F8F6F0"
+                    BorderThickness="0"
+                    Foreground="#1f3b4d"
+                    ItemContainerStyle="{StaticResource AppTabItem}">
+            <TabItem Header="Habitaciones">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Título + botón crear (en la misma fila) -->
-                    <DockPanel Grid.Row="0" LastChildFill="False">
-
-                        <TextBlock DockPanel.Dock="Left"
-                                       Text="Ventana de Habitaciones"
-                                       Style="{StaticResource HeaderMainTitle}"/>
-
-                        <!-- Botón crear (pequeño, como en la foto) -->
-                        <Button DockPanel.Dock="Right"
-                                    Content=" + Crear habitación"
-                                    Style="{StaticResource HeaderNavigateButton}"
-                                     Command="{Binding GoCreateRoomCommand}"/>
-                    </DockPanel>
-
-                    <!-- Card blanca de filtros -->
-                    <Border Grid.Row="1"
-                                Background="#F7FAFD"
-                                CornerRadius="14"
-                                Padding="12"
-                                Margin="0,14,0,0">
-
-                        <!--
-                               WrapPanel: intenta todo en 1 fila.
-                               Si no cabe, baja automáticamente a 2ª fila (o más si tu ventana es muy estrecha).
-                               Con tamaños compactos normalmente quedará en 2 filas máximo.
-                            -->
+                    <!-- ================= HEADER ================= -->
+                    <Border Grid.Row="0" Style="{StaticResource HeaderWrapper}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="1.5*"/>
-                            </Grid.ColumnDefinitions>
 
-                            <!-- Fila 0: Inputs -->
-                            <StackPanel Grid.Column="0" Margin="0,0,10,10">
-                                <Label Content="Tipo" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
-                                <ComboBox Style="{StaticResource DropdownStyle}"
-                                              SelectedValue="{Binding Type, UpdateSourceTrigger=PropertyChanged}"
-                                              SelectedValuePath="Content">
-                                    <ComboBoxItem Content="Todos"/>
-                                    <ComboBoxItem Content="single"/>
-                                    <ComboBoxItem Content="double"/>
-                                    <ComboBoxItem Content="suite"/>
-                                    <ComboBoxItem Content="family"/>
-                                </ComboBox>
-                            </StackPanel>
+                            <DockPanel Grid.Row="0" LastChildFill="False">
+                                <TextBlock DockPanel.Dock="Left"
+                                           Text="Ventana de Habitaciones"
+                                           Style="{StaticResource HeaderMainTitle}"/>
+                                <Button DockPanel.Dock="Right"
+                                        Content=" + Crear habitación"
+                                        Style="{StaticResource HeaderNavigateButton}"
+                                        Command="{Binding GoCreateRoomCommand}"/>
+                            </DockPanel>
 
-                            <StackPanel Grid.Column="1" Margin="0,0,10,10">
-                                <Label Content="Huéspedes" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
-                                <TextBox Style="{StaticResource TextBoxForm}" Text="{Binding GuestsText, UpdateSourceTrigger=PropertyChanged}"/>
-                            </StackPanel>
+                            <Border Grid.Row="1"
+                                    Background="#F7FAFD"
+                                    CornerRadius="14"
+                                    Padding="12"
+                                    Margin="0,14,0,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                    </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="2" Margin="0,0,10,10">
-                                <Label Content="Min (€)" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
-                                <TextBox Style="{StaticResource TextBoxForm}" Text="{Binding MinPriceText, UpdateSourceTrigger=PropertyChanged}"/>
-                            </StackPanel>
+                                    <StackPanel Grid.Column="0" Margin="0,0,10,10">
+                                        <Label Content="Tipo" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <ComboBox Style="{StaticResource DropdownStyle}"
+                                                  SelectedValue="{Binding Type, UpdateSourceTrigger=PropertyChanged}"
+                                                  SelectedValuePath="Content">
+                                            <ComboBoxItem Content="Todos"/>
+                                            <ComboBoxItem Content="single"/>
+                                            <ComboBoxItem Content="double"/>
+                                            <ComboBoxItem Content="suite"/>
+                                            <ComboBoxItem Content="family"/>
+                                        </ComboBox>
+                                    </StackPanel>
 
-                            <StackPanel Grid.Column="3" Margin="0,0,10,10">
-                                <Label Content="Max (€)" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
-                                <TextBox Style="{StaticResource TextBoxForm}" Text="{Binding MaxPriceText, UpdateSourceTrigger=PropertyChanged}"/>
-                            </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="0,0,10,10">
+                                        <Label Content="Huéspedes" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <TextBox Style="{StaticResource TextBoxForm}" Text="{Binding GuestsText, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
 
-                            <StackPanel Grid.Column="4" Margin="0,0,0,10">
-                                <Label Content="Extras / Buscar" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
-                                <TextBox Style="{StaticResource TextBoxForm}" Text="{Binding ExtrasText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Busca por extras..."/>
-                            </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="0,0,10,10">
+                                        <Label Content="Min (€)" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <TextBox Style="{StaticResource TextBoxForm}" Text="{Binding MinPriceText, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
 
-                            <!-- Fila 1: Checks + Botones -->
-                            <Grid Grid.Row="1" Grid.ColumnSpan="5" Margin="0,5,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="3" Margin="0,0,10,10">
+                                        <Label Content="Max (€)" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <TextBox Style="{StaticResource TextBoxForm}" Text="{Binding MaxPriceText, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
 
-                                <!-- Checks -->
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <CheckBox Content="Solo disponibles" Style="{StaticResource FormCheckBox}" IsChecked="{Binding OnlyAvailable}" Margin="0,0,15,0"/>
-                                    <CheckBox Content="Cama extra" Style="{StaticResource FormCheckBox}" IsChecked="{Binding HasExtraBed}" Margin="0,0,15,0"/>
-                                    <CheckBox Content="Cuna" Style="{StaticResource FormCheckBox}" IsChecked="{Binding HasCrib}" Margin="0,0,15,0"/>
-                                    <CheckBox Content="Oferta" Style="{StaticResource FormCheckBox}" IsChecked="{Binding HasOffer}"/>
-                                </StackPanel>
+                                    <StackPanel Grid.Column="4" Margin="0,0,0,10">
+                                        <Label Content="Extras / Buscar" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <TextBox Style="{StaticResource TextBoxForm}" Text="{Binding ExtrasText, UpdateSourceTrigger=PropertyChanged}" ToolTip="Busca por extras..."/>
+                                    </StackPanel>
 
-                                <!-- Botones -->
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <Button Style="{StaticResource ClearFiltersBtn}" Content="Limpiar" Command="{Binding ClearFiltersCommand}" 
-                                                Height="38" Padding="15,0" Margin="0,0,10,0" FontSize="14"/>
-                                    <Button Style="{StaticResource SaveBtn}" Content="Buscar" Command="{Binding SearchCommand}" 
-                                                Height="38" Width="120" Margin="0" FontSize="14" FontWeight="SemiBold"/>
-                                </StackPanel>
-                            </Grid>
+                                    <Grid Grid.Row="1" Grid.ColumnSpan="5" Margin="0,5,0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <CheckBox Content="Solo disponibles" Style="{StaticResource FormCheckBox}" IsChecked="{Binding OnlyAvailable}" Margin="0,0,15,0"/>
+                                            <CheckBox Content="Cama extra" Style="{StaticResource FormCheckBox}" IsChecked="{Binding HasExtraBed}" Margin="0,0,15,0"/>
+                                            <CheckBox Content="Cuna" Style="{StaticResource FormCheckBox}" IsChecked="{Binding HasCrib}" Margin="0,0,15,0"/>
+                                            <CheckBox Content="Oferta" Style="{StaticResource FormCheckBox}" IsChecked="{Binding HasOffer}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <Button Style="{StaticResource ClearFiltersBtn}"
+                                                    Content="Limpiar"
+                                                    Command="{Binding ClearFiltersCommand}"
+                                                    Height="38"
+                                                    Padding="15,0"
+                                                    Margin="0,0,10,0"
+                                                    FontSize="14"/>
+                                            <Button Style="{StaticResource SaveBtn}"
+                                                    Content="Buscar"
+                                                    Command="{Binding SearchCommand}"
+                                                    Height="38"
+                                                    Width="120"
+                                                    Margin="0"
+                                                    FontSize="14"
+                                                    FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Grid>
+                            </Border>
                         </Grid>
                     </Border>
+
+                    <Grid Grid.Row="1" Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="{Binding StatusText}"
+                                   Foreground="#6B7280"
+                                   VerticalAlignment="Center"/>
+
+                        <Button Grid.Column="1"
+                                Style="{StaticResource SaveBtn}"
+                                Content="Refrescar"
+                                Command="{Binding RefreshCommand}"/>
+                    </Grid>
+
+                    <Grid Grid.Row="2">
+                        <ItemsControl ItemsSource="{Binding Rooms}"
+                                      ItemTemplate="{StaticResource RoomCardTemplate}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="4"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </Grid>
                 </Grid>
-            </Border>
+            </TabItem>
 
-            <!-- ===== Resultados + refrescar ===== -->
-            <Grid Grid.Row="1" Margin="0,0,0,14">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+            <TabItem Header="Tablero">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                <TextBlock Text="{Binding StatusText}"
-                               Foreground="#6B7280"
-                               VerticalAlignment="Center"/>
+                    <Border Grid.Row="0" Style="{StaticResource HeaderWrapper}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                <Button Grid.Column="1"
-                            Style="{StaticResource SaveBtn}"
-                            Content="Refrescar"
-                            Command="{Binding RefreshCommand}"/>
-            </Grid>
+                            <DockPanel Grid.Row="0" LastChildFill="False">
+                                <TextBlock DockPanel.Dock="Left"
+                                           Text="Ventana de Estados"
+                                           Style="{StaticResource HeaderMainTitle}"/>
+                            </DockPanel>
 
-            <!-- ===== Cards habitaciones ===== -->
-            <Grid Grid.Row="2">
-                <ItemsControl ItemsSource="{Binding Rooms}"
-                                  ItemTemplate="{StaticResource RoomCardTemplate}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <!-- para que se establezca en 4 columnas y se adapte al tamaño de la pantalla -->
-                            <UniformGrid Columns="4"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-            </Grid>
+                            <Border Grid.Row="1"
+                                    Background="#F7FAFD"
+                                    CornerRadius="14"
+                                    Padding="12"
+                                    Margin="0,14,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.2*"/>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-        </Grid>
+                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                        <Label Content="Estado" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <ComboBox Style="{StaticResource DropdownStyle}"
+                                                  ItemsSource="{Binding RoomStatusOptions}"
+                                                  DisplayMemberPath="Label"
+                                                  SelectedValuePath="Value"
+                                                  SelectedValue="{Binding BoardStatusFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                                        <Label Content="Buscar (número o tipo)" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <TextBox Style="{StaticResource TextBoxForm}"
+                                                 Text="{Binding BoardSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="2"
+                                            Style="{StaticResource SaveBtn}"
+                                            Content="Refrescar"
+                                            Command="{Binding LoadStatusBoardCommand}"
+                                            VerticalAlignment="Bottom"
+                                            Height="38"
+                                            Width="120"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="1" Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="{Binding BoardRoomsView.Count, StringFormat=Resultados: {0}}"
+                                   VerticalAlignment="Center"
+                                   Foreground="#6B7280"/>
+
+                        <Button Grid.Column="1"
+                                Style="{StaticResource SaveBtn}"
+                                Content="Refrescar"
+                                Command="{Binding LoadStatusBoardCommand}"/>
+                    </Grid>
+
+                    <!-- Grid estilo Booking/Usuarios -->
+                    <ListView Grid.Row="2"
+                              ItemsSource="{Binding BoardRoomsView}"
+                              SelectedItem="{Binding SelectedBoardRoom, Mode=TwoWay}"
+                              AlternationCount="2"
+                              ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
+                              Margin="10 3"
+                              BorderThickness="0.5">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Número" HeaderContainerStyle="{StaticResource TableHeader}" Width="120">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding RoomNumber}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Tipo" HeaderContainerStyle="{StaticResource TableHeader}" Width="160">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Type}" Style="{StaticResource GridViewCellText}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Estado" HeaderContainerStyle="{StaticResource TableHeader}" Width="160">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource RoomStatusPillStyle}">
+                                                <TextBlock Text="{Binding StatusLabel}"
+                                                           Style="{StaticResource GridViewCellText}"
+                                                           Foreground="#ffffff"
+                                                           Padding="0"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="" HeaderContainerStyle="{StaticResource TableHeader}" Width="65">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource UpdateBookingBtn}"
+                                                    Content="edit"
+                                                    Command="{Binding DataContext.OpenChangeStatusCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </Grid>
 </UserControl>

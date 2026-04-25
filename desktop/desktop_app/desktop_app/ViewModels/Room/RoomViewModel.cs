@@ -5,11 +5,14 @@ using desktop_app.ViewModels;
 using desktop_app.Views;
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Collections.Generic;
 using System.Windows.Input;
+using System.Windows.Data;
 
 namespace desktop_app.ViewModels.Room
 {
@@ -18,6 +21,11 @@ namespace desktop_app.ViewModels.Room
     /// </summary>
     public class RoomViewModel : ViewModelBase
     {
+        public class StatusOption
+        {
+            public string Value { get; set; } = "";
+            public string Label { get; set; } = "";
+        }
         #region Propiedades
 
         /// <summary>Colección de habitaciones mostradas.</summary>
@@ -45,6 +53,91 @@ namespace desktop_app.ViewModels.Room
         }
 
         private RoomsFilter _lastFilter = new RoomsFilter();
+
+        #endregion
+
+        #region Tablero (Status board)
+
+        private ObservableCollection<RoomModel> _boardRooms = new();
+        public ObservableCollection<RoomModel> BoardRooms
+        {
+            get => _boardRooms;
+            set
+            {
+                if (SetProperty(ref _boardRooms, value))
+                {
+                    BoardRoomsView = CollectionViewSource.GetDefaultView(_boardRooms);
+                    BoardRoomsView.Filter = BoardRoomFilter;
+                    BoardRoomsView.Refresh();
+                }
+            }
+        }
+
+        private ICollectionView? _boardRoomsView;
+        public ICollectionView? BoardRoomsView
+        {
+            get => _boardRoomsView;
+            private set => SetProperty(ref _boardRoomsView, value);
+        }
+
+        private RoomModel? _selectedBoardRoom;
+        public RoomModel? SelectedBoardRoom
+        {
+            get => _selectedBoardRoom;
+            set
+            {
+                if (SetProperty(ref _selectedBoardRoom, value))
+                {
+                    _ = LoadSelectedRoomStatusHistoryAsync();
+                }
+            }
+        }
+
+        private ObservableCollection<RoomStatusLogEntry> _selectedRoomStatusHistory = new();
+        public ObservableCollection<RoomStatusLogEntry> SelectedRoomStatusHistory
+        {
+            get => _selectedRoomStatusHistory;
+            set => SetProperty(ref _selectedRoomStatusHistory, value);
+        }
+
+        private string _boardSearchText = "";
+        public string BoardSearchText
+        {
+            get => _boardSearchText;
+            set
+            {
+                if (SetProperty(ref _boardSearchText, value))
+                {
+                    BoardRoomsView?.Refresh();
+                }
+            }
+        }
+
+        private string _boardStatusFilter = "";
+        public string BoardStatusFilter
+        {
+            get => _boardStatusFilter;
+            set
+            {
+                if (SetProperty(ref _boardStatusFilter, value))
+                {
+                    BoardRoomsView?.Refresh();
+                }
+            }
+        }
+
+        public List<StatusOption> RoomStatusOptions { get; } = new()
+        {
+            new StatusOption{ Value = "", Label = "Todos" },
+            new StatusOption{ Value = "available", Label = "Disponible" },
+            new StatusOption{ Value = "occupied", Label = "Ocupada" },
+            new StatusOption{ Value = "cleaning", Label = "Limpieza" },
+            new StatusOption{ Value = "maintenance", Label = "Mantenimiento" },
+            new StatusOption{ Value = "blocked", Label = "Bloqueada" }
+        };
+
+        public AsyncRelayCommand LoadStatusBoardCommand { get; }
+        public RelayCommand OpenChangeStatusCommand { get; }
 
         #endregion
 
@@ -178,6 +271,12 @@ namespace desktop_app.ViewModels.Room
             DeleteRoomCommand = new RelayCommand(async param => await DeleteRoomAsync(param as RoomModel));
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
 
+            LoadStatusBoardCommand = new AsyncRelayCommand(LoadStatusBoardAsync);
+            OpenChangeStatusCommand = new RelayCommand(param => OpenChangeStatus(param as RoomModel));
+
+            BoardRoomsView = CollectionViewSource.GetDefaultView(BoardRooms);
+            BoardRoomsView.Filter = BoardRoomFilter;
+
             GoCreateRoomCommand = new RelayCommand(_ =>
                 NavigationService.Instance.NavigateTo<CreateRoomWindow>());
 
@@ -198,6 +297,7 @@ namespace desktop_app.ViewModels.Room
             });
 
             _ = LoadInitialAsync();
+            _ = LoadStatusBoardAsync();
         }
 
         #region Métodos Privados
@@ -296,6 +396,61 @@ namespace desktop_app.ViewModels.Room
 
             Rooms = new ObservableCollection<RoomModel>(response.Items);
             StatusText = $"Resultados: {Rooms.Count}";
+        }
+
+        private async Task LoadStatusBoardAsync()
+        {
+            var items = await RoomService.GetRoomsStatusBoardAsync();
+            if (items == null)
+            {
+                return;
+            }
+            BoardRooms = new ObservableCollection<RoomModel>(items);
+        }
+
+        private bool BoardRoomFilter(object obj)
+        {
+            if (obj is not RoomModel r) return false;
+
+            var statusOk = string.IsNullOrWhiteSpace(BoardStatusFilter) ||
+                           string.Equals(r.Status ?? "", BoardStatusFilter, StringComparison.OrdinalIgnoreCase);
+
+            if (!statusOk) return false;
+
+            var q = (BoardSearchText ?? "").Trim();
+            if (q.Length == 0) return true;
+
+            return (r.RoomNumber ?? "").Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                   (r.Type ?? "").Contains(q, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void OpenChangeStatus(RoomModel? room)
+        {
+            if (room == null) return;
+            SelectedBoardRoom = room;
+            var win = new ChangeRoomStatusWindow(room);
+            var ok = win.ShowDialog();
+            if (ok == true)
+            {
+                _ = LoadStatusBoardAsync();
+            }
+        }
+
+        private async Task LoadSelectedRoomStatusHistoryAsync()
+        {
+            if (SelectedBoardRoom == null)
+            {
+                SelectedRoomStatusHistory = new ObservableCollection<RoomStatusLogEntry>();
+                return;
+            }
+
+            var items = await RoomService.GetRoomStatusLogAsync(SelectedBoardRoom.Id);
+            if (items == null)
+            {
+                SelectedRoomStatusHistory = new ObservableCollection<RoomStatusLogEntry>();
+                return;
+            }
+            SelectedRoomStatusHistory = new ObservableCollection<RoomStatusLogEntry>(items);
         }
 
         /// <summary>

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,12 +36,14 @@ import java.util.Locale
  * @param booking - Reserva que se quiere mostrar
  * @param room - Habitación reservada
  * @param onDetailsButtonClick - Callback al hacer click en el botón de "Mostrar detalles"
+ * @param onInvoiceClick - Si la reserva tiene factura en servidor, abre el PDF (null si no se usa)
  */
 @Composable
 fun BookingCard(
     booking: Booking,
     room : Room,
-    onDetailsButtonClick: (String) -> Unit
+    onDetailsButtonClick: (String) -> Unit,
+    onInvoiceClick: (() -> Unit)? = null
 ) {
     Card(
         modifier = Modifier
@@ -141,6 +144,18 @@ fun BookingCard(
                         value = booking.checkOutDate.dayOfMonth.toString() + "/" + booking.checkOutDate.monthValue + "/" + booking.checkOutDate.year
                     )
                 }
+
+                if (booking.invoiceNumber != null && onInvoiceClick != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onInvoiceClick,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Ver factura (PDF)")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
                     onClick = { onDetailsButtonClick(booking.id) },

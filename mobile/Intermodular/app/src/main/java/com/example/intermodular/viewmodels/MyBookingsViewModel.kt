@@ -4,11 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.intermodular.data.remote.ApiErrorHandler
 import com.example.intermodular.data.remote.auth.SessionManager
+import android.content.Context
 import com.example.intermodular.data.repository.BookingRepository
 import com.example.intermodular.data.repository.RoomRepository
 import com.example.intermodular.models.Booking
 import com.example.intermodular.models.Room
 import com.example.intermodular.models.RoomFilter
+import com.example.intermodular.util.InvoicePdfOpener
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -50,6 +52,9 @@ class MyBookingsViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _invoiceOpening = MutableStateFlow(false)
+    val invoiceOpening: StateFlow<Boolean> = _invoiceOpening
+
     //==================== MÉTODOS PÚBLICOS ==============================
     /**
      * Bloque de inicio del ViewModel
@@ -79,6 +84,26 @@ class MyBookingsViewModel(
                 _errorMessage.value = ApiErrorHandler.getErrorMessage(e)
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * Descarga el PDF de factura y lo abre con una app externa.
+     */
+    fun openInvoicePdf(bookingId: String, context: Context) {
+        viewModelScope.launch {
+            _invoiceOpening.value = true
+            _errorMessage.value = null
+            try {
+                val bytes = bookingRepository.getInvoicePdfBytes(bookingId)
+                if (!InvoicePdfOpener.openPdfFromBytes(context, bookingId, bytes)) {
+                    _errorMessage.value = "No hay ninguna aplicación para abrir el PDF"
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = ApiErrorHandler.getErrorMessage(e)
+            } finally {
+                _invoiceOpening.value = false
             }
         }
     }

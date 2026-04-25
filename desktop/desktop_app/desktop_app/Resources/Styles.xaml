@@ -254,6 +254,31 @@
             </DataTrigger>
         </Style.Triggers>
     </Style>
+
+    <Style x:Key="RoomStatusPillStyle" TargetType="Border">
+        <Setter Property="Background" Value="#6c757d"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="8,2"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status}" Value="available">
+                <Setter Property="Background" Value="#28a745"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="occupied">
+                <Setter Property="Background" Value="#dc3545"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="cleaning">
+                <Setter Property="Background" Value="#ffc107"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="maintenance">
+                <Setter Property="Background" Value="#17a2b8"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="blocked">
+                <Setter Property="Background" Value="#6c757d"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
     
     <Style x:Key="AuditActionStyle" TargetType="Border">
         <Setter Property="Background" Value="#6c757d"/>
@@ -1025,7 +1050,7 @@
                            FontWeight="Bold"
                            Text="{Binding RoomNumber, StringFormat=Habitación {0}}"/>
 
-                <!-- ===== Tipo + Badge Disponibilidad ===== -->
+                <!-- ===== Tipo + Badge Estado ===== -->
                 <Grid Grid.Row="2" Margin="0,6,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -1037,34 +1062,12 @@
                                VerticalAlignment="Center"/>
 
                     <Border Grid.Column="1"
-                            CornerRadius="999"
-                            Padding="10,4"
+                            Style="{StaticResource RoomStatusPillStyle}"
                             VerticalAlignment="Center">
-
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="#10B981"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                        <Setter Property="Background" Value="#EF4444"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-
-                        <TextBlock FontWeight="SemiBold" FontSize="10">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="White"/>
-                                    <Setter Property="Text" Value="Disponible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                            <Setter Property="Text" Value="No disponible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+                        <TextBlock FontWeight="SemiBold"
+                                   FontSize="10"
+                                   Foreground="White"
+                                   Text="{Binding StatusLabel}"/>
                     </Border>
                 </Grid>
 

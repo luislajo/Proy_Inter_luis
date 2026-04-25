@@ -30,6 +30,23 @@ namespace desktop_app.Views
             DataContext = _vm;
             PasswordBox.PasswordChanged += (_, __) => {if (!_vm.IsPasswordVisible)_vm.Password = PasswordBox.Password;};
             _vm.PropertyChanged += VmOnPropertyChanged;
+
+            Loaded += (_, __) => TryDevAutoLogin();
+        }
+
+        private void TryDevAutoLogin()
+        {
+            if (!DevAutoLogin.Enabled) return;
+            if (!string.IsNullOrWhiteSpace(TokenStore.AccessToken)) return;
+
+            _vm.Email = DevAutoLogin.AdminEmail;
+            _vm.Password = DevAutoLogin.AdminPassword;
+
+            // keep UI controls in sync
+            PasswordBox.Password = DevAutoLogin.AdminPassword;
+            PasswordTextBox.Text = DevAutoLogin.AdminPassword;
+
+            _vm.LoginCommand.Execute(null);
         }
 
         /// <summary>

@@ -22,6 +22,65 @@ namespace desktop_app.Services
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
+        public static async Task<List<RoomModel>?> GetRoomsStatusBoardAsync()
+        {
+            try
+            {
+                var url = ApiService.BaseUrl + "room/status-board";
+                var resp = await ApiService._httpClient.GetAsync(url);
+                if (!resp.IsSuccessStatusCode) return new List<RoomModel>();
+                var json = await resp.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<List<RoomModel>>(json, _jsonOptions) ?? new List<RoomModel>();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static async Task<(bool Ok, string? Error)> PatchRoomStatusAsync(string roomId, string status, string? reason, int? estimatedMinutes)
+        {
+            try
+            {
+                var url = ApiService.BaseUrl + $"room/{Uri.EscapeDataString(roomId)}/status";
+                var payload = new
+                {
+                    status,
+                    reason,
+                    estimatedMinutes
+                };
+                var json = JsonSerializer.Serialize(payload, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var req = new HttpRequestMessage(new HttpMethod("PATCH"), url) { Content = content };
+                var resp = await ApiService._httpClient.SendAsync(req);
+                if (resp.IsSuccessStatusCode) return (true, null);
+
+                var body = await resp.Content.ReadAsStringAsync();
+                var msg = $"HTTP {(int)resp.StatusCode} {resp.ReasonPhrase}\n{body}";
+                return (false, msg);
+            }
+            catch
+            {
+                return (false, "Error de conexión con API.");
+            }
+        }
+
+        public static async Task<List<RoomStatusLogEntry>?> GetRoomStatusLogAsync(string roomId)
+        {
+            try
+            {
+                var url = ApiService.BaseUrl + $"room/{Uri.EscapeDataString(roomId)}/status-log";
+                var resp = await ApiService._httpClient.GetAsync(url);
+                if (!resp.IsSuccessStatusCode) return new List<RoomStatusLogEntry>();
+                var json = await resp.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<List<RoomStatusLogEntry>>(json, _jsonOptions) ?? new List<RoomStatusLogEntry>();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         /// <summary>
         /// Obtiene habitaciones aplicando un filtro opcional.
         /// </summary>

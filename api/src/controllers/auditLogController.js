@@ -1,3 +1,6 @@
+/**
+ * @file Lecturas de la colección `audit_log`: global, por reserva, habitación o actividad derivada del cliente.
+ */
 import { auditLogModel } from '../models/auditLogModel.js';
 import { bookingDatabaseModel } from '../models/bookingModel.js';
 import mongoose from 'mongoose';

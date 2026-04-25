@@ -22,6 +22,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.intermodular.R
+import com.example.intermodular.data.remote.auth.DevAutoLogin
 import com.example.intermodular.data.remote.auth.SessionManager
 import com.example.intermodular.viewmodels.LoginViewModel
 
@@ -63,6 +64,14 @@ fun LoginScreen(
     // Estados locales para campos de entrada
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        if (DevAutoLogin.ENABLED && SessionManager.getToken().isNullOrBlank()) {
+            email = DevAutoLogin.ADMIN_EMAIL
+            password = DevAutoLogin.ADMIN_PASSWORD
+            viewModel.login(email.trim(), password)
+        }
+    }
 
     /**
      * Detecta cuándo el login ha finalizado correctamente.

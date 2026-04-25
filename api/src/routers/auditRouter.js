@@ -1,3 +1,7 @@
+/**
+ * @file Rutas bajo `/audit`: listado global y por entidad (reserva, habitación, actividad de cliente).
+ * Permisos: staff en lecturas globales y por ID; cliente autenticado en `/client/:id` (su historial vía reservas).
+ */
 import express from "express";
 import { getAllAuditLogs, getAuditLogByBookingId, getAuditLogByRoomId, getAuditLogByUserId } from "../controllers/auditLogController.js";
 import { verifyToken, authorizeRoles } from "../middlewares/authMiddleware.js";

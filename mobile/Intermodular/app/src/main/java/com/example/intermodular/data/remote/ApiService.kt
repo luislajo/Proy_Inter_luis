@@ -16,6 +16,7 @@ import com.example.intermodular.data.remote.dto.UpdateUserResponseDto
 import com.example.intermodular.data.remote.dto.UserDto
 import com.example.intermodular.data.remote.dto.AuditLogDto
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Multipart
@@ -52,7 +53,6 @@ interface ApiService {
     @GET("booking/{id}")
     suspend fun getBookingById(@Path("id") id : String) : BookingDto
 
-
     /**
      * Obtiene la lista de las reservas de un usuario específico
      * @author Axel Zaragoci
@@ -62,6 +62,12 @@ interface ApiService {
      */
     @GET("booking/client/{id}")
     suspend fun getBookingsByUserId(@Path("id") id: String) : List<BookingDto>
+
+    /**
+     * Descarga el PDF de factura de una reserva (respuesta binaria; Retrofit devuelve [ResponseBody] sin conversión JSON).
+     */
+    @GET("booking/{id}/invoice")
+    suspend fun getInvoicePdf(@Path("id") id: String): ResponseBody
 
     /**
      * Obtiene el historial de auditoría de un usuario
