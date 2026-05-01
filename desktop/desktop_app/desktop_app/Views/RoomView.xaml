@@ -230,12 +230,14 @@
                                 Command="{Binding LoadStatusBoardCommand}"/>
                     </Grid>
 
-                    <!-- Grid estilo Booking/Usuarios -->
+                    <!-- Tabla estilo Booking/Usuarios (ListView + GridView) -->
                     <ListView Grid.Row="2"
+                              x:Name="BoardRoomsListView"
                               ItemsSource="{Binding BoardRoomsView}"
                               SelectedItem="{Binding SelectedBoardRoom, Mode=TwoWay}"
                               AlternationCount="2"
                               ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
+                              SizeChanged="ListView_SizeChanged"
                               Margin="10 3"
                               BorderThickness="0.5">
                         <ListView.View>
@@ -248,7 +250,7 @@
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
 
-                                <GridViewColumn Header="Tipo" HeaderContainerStyle="{StaticResource TableHeader}" Width="160">
+                                <GridViewColumn Header="Tipo" HeaderContainerStyle="{StaticResource TableHeader}">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding Type}" Style="{StaticResource GridViewCellText}"/>
@@ -260,10 +262,7 @@
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <Border Style="{StaticResource RoomStatusPillStyle}">
-                                                <TextBlock Text="{Binding StatusLabel}"
-                                                           Style="{StaticResource GridViewCellText}"
-                                                           Foreground="#ffffff"
-                                                           Padding="0"/>
+                                                <TextBlock Text="{Binding StatusLabel}" Style="{StaticResource GridViewCellText}" Foreground="#ffffff"/>
                                             </Border>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
@@ -282,6 +281,207 @@
                             </GridView>
                         </ListView.View>
                     </ListView>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Incidencias">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Style="{StaticResource HeaderWrapper}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <DockPanel Grid.Row="0" LastChildFill="False">
+                                <TextBlock DockPanel.Dock="Left"
+                                           Text="Incidencias"
+                                           Style="{StaticResource HeaderMainTitle}"/>
+                            </DockPanel>
+
+                            <Border Grid.Row="1"
+                                    Background="#F7FAFD"
+                                    CornerRadius="14"
+                                    Padding="12"
+                                    Margin="0,14,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="1.4*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                        <Label Content="Severidad" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <ComboBox Style="{StaticResource DropdownStyle}"
+                                                  ItemsSource="{Binding IncidentSeverityOptions}"
+                                                  DisplayMemberPath="Label"
+                                                  SelectedValuePath="Value"
+                                                  SelectedValue="{Binding IncidentSeverityFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                                        <Label Content="Estado" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <ComboBox Style="{StaticResource DropdownStyle}"
+                                                  ItemsSource="{Binding IncidentStatusOptions}"
+                                                  DisplayMemberPath="Label"
+                                                  SelectedValuePath="Value"
+                                                  SelectedValue="{Binding IncidentStatusFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                                        <Label Content="Habitación (room_id)" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <TextBox Style="{StaticResource TextBoxForm}"
+                                                 Text="{Binding IncidentRoomFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="3"
+                                            Style="{StaticResource SaveBtn}"
+                                            Content="Buscar"
+                                            Command="{Binding LoadIncidentsCommand}"
+                                            VerticalAlignment="Bottom"
+                                            Height="38"
+                                            Width="120"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Dashboard -->
+                    <Border Grid.Row="1" Background="#F7FAFD" CornerRadius="14" Padding="12" Margin="0,0,0,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                <TextBlock Text="Abiertas (Baja)" Foreground="#6B7280"/>
+                                <TextBlock Text="{Binding OpenLowCount}" FontSize="20" FontWeight="Bold"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                <TextBlock Text="Abiertas (Media)" Foreground="#6B7280"/>
+                                <TextBlock Text="{Binding OpenMediumCount}" FontSize="20" FontWeight="Bold"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                <TextBlock Text="Abiertas (Alta)" Foreground="#6B7280"/>
+                                <TextBlock Text="{Binding OpenHighCount}" FontSize="20" FontWeight="Bold"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="3" HorizontalAlignment="Center">
+                                <TextBlock Text="Habitaciones afectadas" Foreground="#6B7280"/>
+                                <TextBlock Text="{Binding AffectedRoomsCount}" FontSize="20" FontWeight="Bold"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Listado -->
+                    <Grid Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="{Binding IncidentsStatusText}"
+                                           Foreground="#6B7280"
+                                           VerticalAlignment="Center"/>
+
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource SaveBtn}"
+                                        Content="Refrescar"
+                                        Command="{Binding LoadIncidentsCommand}"/>
+                            </Grid>
+
+                            <!-- Tabla estilo Booking/Usuarios (ListView + GridView) -->
+                            <ListView Grid.Row="1"
+                                      x:Name="IncidentsListView"
+                                      ItemsSource="{Binding Incidents}"
+                                      SelectedItem="{Binding SelectedIncident, Mode=TwoWay}"
+                                      AlternationCount="2"
+                                      ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
+                                      SizeChanged="ListView_SizeChanged"
+                                      Margin="10 3"
+                                      BorderThickness="0.5">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Fecha" HeaderContainerStyle="{StaticResource TableHeader}" Width="135">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding ReportedAt, StringFormat='dd/MM/yyyy HH:mm'}" Style="{StaticResource GridViewCellText}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <GridViewColumn Header="Habitación" HeaderContainerStyle="{StaticResource TableHeader}" Width="110">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding RoomNumber}" Style="{StaticResource GridViewCellText}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <GridViewColumn Header="Severidad" HeaderContainerStyle="{StaticResource TableHeader}" Width="100">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding SeverityLabel}" Style="{StaticResource GridViewCellText}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <GridViewColumn Header="Estado" HeaderContainerStyle="{StaticResource TableHeader}" Width="110">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource StatusTextStyle}">
+                                                        <TextBlock Text="{Binding StatusLabel}" Style="{StaticResource GridViewCellText}" Foreground="#ffffff"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <GridViewColumn Header="Tipo" HeaderContainerStyle="{StaticResource TableHeader}" Width="110">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Type}" Style="{StaticResource GridViewCellText}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <GridViewColumn Header="Descripción" HeaderContainerStyle="{StaticResource TableHeader}">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Description}" TextTrimming="CharacterEllipsis" Style="{StaticResource GridViewCellText}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <GridViewColumn Header="" HeaderContainerStyle="{StaticResource TableHeader}" Width="65">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource UpdateBookingBtn}"
+                                                            Content="edit"
+                                                            Command="{Binding DataContext.OpenIncidentDetailCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                    </Grid>
                 </Grid>
             </TabItem>
         </TabControl>

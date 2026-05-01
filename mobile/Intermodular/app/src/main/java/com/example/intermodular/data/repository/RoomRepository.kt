@@ -30,7 +30,8 @@ class RoomRepository(
     suspend fun getRooms(filter: RoomFilter = RoomFilter()): List<Room> {
         return api.getRooms(
             type = filter.type,
-            isAvailable = filter.isAvailable,
+            // Do not use server isAvailable filter: occupied/cleaning still reservable per business rule
+            isAvailable = null,
             minPrice = filter.minPrice,
             maxPrice = filter.maxPrice,
             guests = filter.guests,
@@ -40,6 +41,13 @@ class RoomRepository(
             extras = filter.extras?.joinToString(","),
             sortBy = filter.sortBy,
             sortOrder = filter.sortOrder
-        ).items.map { it.toDomain() }
+        ).items
+            .map { it.toDomain() }
+            // hide only not-reservable statuses
+            .filter { r -> r.status != "maintenance" && r.status != "blocked" }
+    }
+
+    suspend fun getRoomById(roomId: String): Room {
+        return api.getRoomById(roomId).toDomain()
     }
 }

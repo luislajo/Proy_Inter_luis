@@ -239,6 +239,88 @@
             </Trigger>
         </Style.Triggers>
     </Style>
+
+    <!-- DataGrid (responsive columns) -->
+    <Style x:Key="DataGridTableHeader" TargetType="DataGridColumnHeader">
+        <Setter Property="Background" Value="#f1f7fc"/>
+        <Setter Property="Foreground" Value="#1f3b4d"/>
+        <Setter Property="Padding" Value="5 10"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridColumnHeader">
+                    <Border Background="{TemplateBinding Background}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="DataGridCell" TargetType="DataGridCell">
+        <Setter Property="Padding" Value="12 10"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="AppDataGridRow" TargetType="DataGridRow">
+        <Setter Property="Background" Value="#ffffff"/>
+        <Setter Property="BorderThickness" Value="0 1"/>
+        <Setter Property="BorderBrush" Value="#e6f0f8"/>
+        <Setter Property="Padding" Value="5 0"/>
+        <Setter Property="Foreground" Value="#1f3b4d"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="MinHeight" Value="44"/>
+        <Style.Triggers>
+            <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                <Setter Property="Background" Value="#f1f7fc"/>
+            </Trigger>
+
+            <!-- Igual que ListView: no cambies color en hover/selected -->
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{Binding RelativeSource={RelativeSource Self}, Path=Background}"/>
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{Binding RelativeSource={RelativeSource Self}, Path=Background}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="AppDataGrid" TargetType="DataGrid">
+        <Setter Property="Background" Value="#ffffff"/>
+        <Setter Property="BorderBrush" Value="#d9e6f2"/>
+        <Setter Property="BorderThickness" Value="0.5"/>
+        <Setter Property="Foreground" Value="#1f3b4d"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="RowBackground" Value="#ffffff"/>
+        <Setter Property="AlternatingRowBackground" Value="#f1f7fc"/>
+        <Setter Property="AlternationCount" Value="2"/>
+        <Setter Property="GridLinesVisibility" Value="None"/>
+        <Setter Property="HeadersVisibility" Value="Column"/>
+        <Setter Property="AutoGenerateColumns" Value="False"/>
+        <Setter Property="CanUserAddRows" Value="False"/>
+        <Setter Property="CanUserDeleteRows" Value="False"/>
+        <Setter Property="CanUserReorderColumns" Value="False"/>
+        <Setter Property="CanUserResizeRows" Value="False"/>
+        <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="SelectionMode" Value="Single"/>
+        <Setter Property="SelectionUnit" Value="FullRow"/>
+        <Setter Property="ColumnHeaderStyle" Value="{StaticResource DataGridTableHeader}"/>
+        <Setter Property="CellStyle" Value="{StaticResource DataGridCell}"/>
+        <Setter Property="RowStyle" Value="{StaticResource AppDataGridRow}"/>
+        <Setter Property="RowHeaderWidth" Value="0"/>
+        <Setter Property="ColumnWidth" Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+    </Style>
     
     <Style x:Key="StatusTextStyle" TargetType="Border">
         <Setter Property="Background" Value="#6c757d"/>
@@ -252,6 +334,12 @@
             <DataTrigger Binding="{Binding Status}" Value="Finalizada">
                 <Setter Property="Background" Value="#17a2b8"/>
             </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="open">
+                <Setter Property="Background" Value="#28a745"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="resolved">
+                <Setter Property="Background" Value="#17a2b8"/>
+            </DataTrigger>
         </Style.Triggers>
     </Style>
 
@@ -259,7 +347,7 @@
         <Setter Property="Background" Value="#6c757d"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="Padding" Value="8,2"/>
+        <Setter Property="Padding" Value="0"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Style.Triggers>
             <DataTrigger Binding="{Binding Status}" Value="available">

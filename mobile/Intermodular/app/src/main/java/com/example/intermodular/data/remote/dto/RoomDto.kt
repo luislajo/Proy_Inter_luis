@@ -33,6 +33,7 @@ data class RoomDto(
     val offer: Double?,
     val extras: List<String>,
     val extraImages: List<String>,
+    val status: String? = null,
     val isAvailable: Boolean,
     val rate: Int
 )

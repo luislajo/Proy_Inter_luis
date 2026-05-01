@@ -43,6 +43,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.ColorPainter
@@ -65,6 +68,8 @@ import com.example.intermodular.views.components.ProfileAvatar
 import com.example.intermodular.views.components.ProfileRow
 import com.example.intermodular.views.navigation.Routes
 import java.time.format.DateTimeFormatter
+import com.example.intermodular.models.Incident
+import java.time.format.DateTimeFormatter as DtFmt
 
 /**
  * Pantalla de perfil de usuario.
@@ -106,7 +111,11 @@ fun UserScreen(
     onMyHistory: () -> Unit,
     onChangePhoto: () -> Unit,
     onEditProfile: () -> Unit,
-    onChangePasswordClick: () -> Unit
+    onChangePasswordClick: () -> Unit,
+    currentStayRoomNumber: String? = null,
+    incidents: List<Incident> = emptyList(),
+    canReportProblem: Boolean = false,
+    onReportProblem: (type: String, severity: String, description: String) -> Unit = { _, _, _ -> }
 ) {
     when {
         // Indicador de carga
@@ -236,6 +245,110 @@ fun UserScreen(
 
                 Spacer(Modifier.height(22.dp))
 
+                // Mi estancia actual (solo si hoy alojado)
+                if (canReportProblem) {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Mi estancia actual",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                text = "Habitación: ${currentStayRoomNumber ?: "-"}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+
+                            Spacer(Modifier.height(12.dp))
+
+                            var showDialog by remember { mutableStateOf(false) }
+                            Button(onClick = { showDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text("Reportar incidencia")
+                            }
+
+                            if (showDialog) {
+                                var category by remember { mutableStateOf("ruido") }
+                                var severity by remember { mutableStateOf("medium") }
+                                var description by remember { mutableStateOf("") }
+
+                                AlertDialog(
+                                    onDismissRequest = { showDialog = false },
+                                    title = { Text("Reportar incidencia") },
+                                    text = {
+                                        Column {
+                                            Text("Categoría")
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                TextButton(onClick = { category = "ruido" }) { Text(if (category=="ruido") "Ruido ✓" else "Ruido") }
+                                                TextButton(onClick = { category = "limpieza" }) { Text(if (category=="limpieza") "Limpieza ✓" else "Limpieza") }
+                                                TextButton(onClick = { category = "averia" }) { Text(if (category=="averia") "Avería ✓" else "Avería") }
+                                            }
+
+                                            Spacer(Modifier.height(10.dp))
+                                            Text("Severidad")
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                TextButton(onClick = { severity = "low" }) { Text(if (severity=="low") "Baja ✓" else "Baja") }
+                                                TextButton(onClick = { severity = "medium" }) { Text(if (severity=="medium") "Media ✓" else "Media") }
+                                                TextButton(onClick = { severity = "high" }) { Text(if (severity=="high") "Alta ✓" else "Alta") }
+                                            }
+
+                                            Spacer(Modifier.height(10.dp))
+                                            OutlinedTextField(
+                                                value = description,
+                                                onValueChange = { description = it },
+                                                label = { Text("Descripción") },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                minLines = 3
+                                            )
+                                        }
+                                    },
+                                    confirmButton = {
+                                        TextButton(
+                                            onClick = {
+                                                onReportProblem(category, severity, description.trim())
+                                                showDialog = false
+                                            }
+                                        ) { Text("Enviar") }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showDialog = false }) { Text("Cancelar") }
+                                    }
+                                )
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = "Mis incidencias",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            val fmt = DtFmt.ofPattern("dd/MM HH:mm")
+                            incidents.take(10).forEach { inc ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = inc.type.replaceFirstChar { it.uppercase() })
+                                        Text(text = inc.description, maxLines = 1)
+                                    }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(text = inc.statusLabel, color = MaterialTheme.colorScheme.primary)
+                                        Text(text = inc.reportedAt.format(fmt), style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                                Divider()
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(22.dp))
+                }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -355,6 +468,14 @@ fun UserScreenState(
             )
         },
         onEditProfile = { navigation.navigate(Routes.UpdateProfile.route) },
-        onChangePasswordClick = { showChangePassDialog = true }
+        onChangePasswordClick = { showChangePassDialog = true },
+        currentStayRoomNumber = uiState.currentStayRoomNumber,
+        incidents = uiState.myIncidents,
+        canReportProblem = uiState.currentStay != null,
+        onReportProblem = { type, severity, description ->
+            if (description.isNotBlank()) {
+                viewModel.reportProblem(type, severity, description)
+            }
+        }
     )
 }

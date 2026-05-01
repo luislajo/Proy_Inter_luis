@@ -20,6 +20,7 @@ import photoRouter from "./lib/image/imageRouter.js";
 import reviewsRouter from "./routers/reviewsRouter.js";
 import auditRouter from "./routers/auditRouter.js";
 import invoicesRouter from "./routers/invoicesRouter.js";
+import incidentsRouter from "./routers/incidentsRouter.js";
 dotenv.config();
 connectDB().then(() => {
   startFinalizePastBookingsJob();
@@ -51,6 +52,7 @@ app.use("/image", photoRouter);
 app.use("/review", reviewsRouter);
 app.use("/audit", auditRouter);
 app.use("/invoices", invoicesRouter);
+app.use("/incidents", incidentsRouter);
 
 app.listen(PORT, () => {
   console.log(`Servidor en el puerto ${PORT}`);

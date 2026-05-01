@@ -5,14 +5,18 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Cambiar estado habitación"
-        SizeToContent="WidthAndHeight"
+        Width="540"
+        Height="520"
+        MinWidth="460"
+        MinHeight="460"
+        ResizeMode="CanResize"
         WindowStartupLocation="CenterOwner"
         Background="#F8F6F0">
     <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -34,7 +38,7 @@
         <StackPanel Grid.Row="2" Margin="0,0,0,10">
             <Label Content="Motivo (obligatorio si no disponible)" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
             <TextBox Style="{StaticResource TextBoxForm}"
-                     Height="70"
+                     MinHeight="100"
                      TextWrapping="Wrap"
                      AcceptsReturn="True"
                      Text="{Binding Reason, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
@@ -44,32 +48,30 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" Margin="0,0,10,0">
                 <Label Content="Duración estimada (min)" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
                 <TextBox Style="{StaticResource TextBoxForm}"
-                         Width="160"
+                         MinWidth="140"
                          Text="{Binding EstimatedMinutesText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          ToolTip="Opcional"/>
             </StackPanel>
 
-            <Button Grid.Column="1"
-                    Style="{StaticResource ClearFiltersBtn}"
-                    Content="Cancelar"
-                    Width="120"
-                    Height="38"
-                    Margin="0,22,10,0"
-                    Command="{Binding CancelCommand}"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,22,0,0" HorizontalAlignment="Right">
+                <Button Style="{StaticResource ClearFiltersBtn}"
+                        Content="Cancelar"
+                        MinWidth="120"
+                        Height="38"
+                        Margin="0,0,10,0"
+                        Command="{Binding CancelCommand}"/>
 
-            <Button Grid.Column="2"
-                    Style="{StaticResource SaveBtn}"
-                    Content="Guardar"
-                    Width="120"
-                    Height="38"
-                    Margin="0,22,0,0"
-                    Command="{Binding SaveCommand}"/>
+                <Button Style="{StaticResource SaveBtn}"
+                        Content="Guardar"
+                        MinWidth="120"
+                        Height="38"
+                        Command="{Binding SaveCommand}"/>
+            </StackPanel>
         </Grid>
     </Grid>
 </Window>

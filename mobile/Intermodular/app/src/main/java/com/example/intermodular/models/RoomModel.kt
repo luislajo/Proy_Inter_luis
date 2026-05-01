@@ -31,6 +31,7 @@ data class Room(
     val offer: Double?,
     val extras: List<String>,
     val extraImages: List<String>,
+    val status: String?,
     val isAvailable: Boolean,
     val rate: Int
 )

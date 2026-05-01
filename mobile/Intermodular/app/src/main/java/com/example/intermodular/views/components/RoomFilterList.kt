@@ -221,7 +221,7 @@ fun RoomFilterList(
                         checked = isAvailable,
                         onCheckedChange = onIsAvailableChanged
                     )
-                    Text(text = "Disponible")
+                    Text(text = "Reservable")
                 }
 
                 Row(

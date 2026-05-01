@@ -23,6 +23,7 @@ import com.example.intermodular.views.screens.MyBookingsScreenState
 import com.example.intermodular.views.screens.RoomScreen
 import com.example.intermodular.data.repository.RoomRepository
 import com.example.intermodular.data.repository.UserRepository
+import com.example.intermodular.data.repository.IncidentRepository
 import com.example.intermodular.viewmodels.UserViewModel
 import com.example.intermodular.viewmodels.LoginViewModel
 import com.example.intermodular.viewmodels.viewModelFacotry.LoginViewModelFactory
@@ -127,11 +128,14 @@ fun Navigation(
             // Obtener dependencias necesarias
             val api = RetrofitProvider.api
             val repository = UserRepository(api)
+            val bookingRepository = BookingRepository(api)
+            val incidentRepository = IncidentRepository(api)
+            val roomRepository = RoomRepository(api)
             val sessionManager = SessionManager
 
             // Crear ViewModel con su factory personalizada
             val viewModel: UserViewModel = viewModel(
-                factory = UserViewModelFactory(repository, sessionManager)
+                factory = UserViewModelFactory(repository, sessionManager, bookingRepository, incidentRepository, roomRepository)
             )
 
             // Cargar pantalla conectada al estado
@@ -172,11 +176,14 @@ fun Navigation(
             // Obtener dependencias necesarias
             val api = RetrofitProvider.api
             val repository = UserRepository(api)
+            val bookingRepository = BookingRepository(api)
+            val incidentRepository = IncidentRepository(api)
+            val roomRepository = RoomRepository(api)
             val sessionManager = SessionManager
 
             // Crear ViewModel con su factory personalizada
             val viewModel: UserViewModel = viewModel(
-                factory = UserViewModelFactory(repository, sessionManager)
+                factory = UserViewModelFactory(repository, sessionManager, bookingRepository, incidentRepository, roomRepository)
             )
 
             // Cargar pantalla conectada al estado

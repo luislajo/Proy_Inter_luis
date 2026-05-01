@@ -12,6 +12,7 @@ import {
   patchRoomStatus,
   getRoomStatusLog
 } from "../controllers/roomsController.js";
+import { createIncidentForRoom, getIncidentsForRoom, getMyIncidentsForRoom } from "../controllers/incidentsController.js";
 import { getAuditLogByRoomId } from "../controllers/auditLogController.js";
 import { authorizeRoles, verifyToken } from "../middlewares/authMiddleware.js";
 import { auditMiddleware } from "../middlewares/auditMiddleware.js";
@@ -23,6 +24,17 @@ router.post("/", verifyToken,
               auditMiddleware("room", "roomID"), createRoom);
 router.get("/", verifyToken, getRoomsFiltered);
 router.get("/status-board", verifyToken, getRoomsStatusBoard);
+
+// Incidencias: clientes pueden reportar (types limitados en controller)
+router.post("/:roomID/incidents", verifyToken, createIncidentForRoom);
+router.get("/:roomID/incidents/my", verifyToken, getMyIncidentsForRoom);
+router.get(
+  "/:roomID/incidents",
+  verifyToken,
+  authorizeRoles(["Admin", "Trabajador"]),
+  getIncidentsForRoom
+);
+
 router.patch(
   "/:roomID/status",
   verifyToken,

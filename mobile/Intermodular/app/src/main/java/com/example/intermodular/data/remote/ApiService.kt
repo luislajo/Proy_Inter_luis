@@ -9,6 +9,7 @@ import com.example.intermodular.data.remote.dto.RegisterDto
 import com.example.intermodular.data.remote.dto.RoomDto
 import com.example.intermodular.data.remote.dto.ReviewDto
 import com.example.intermodular.data.remote.dto.RoomsResponseDto
+import com.example.intermodular.data.remote.dto.IncidentsResponseDto
 import com.example.intermodular.data.remote.dto.UpdateBookingDto
 import com.example.intermodular.data.remote.dto.PayBookingResponseDto
 import com.example.intermodular.data.remote.dto.UpdateUserRequestDto
@@ -144,6 +145,20 @@ interface ApiService {
         @Query("sortBy") sortBy: String? = null,
         @Query("sortOrder") sortOrder: String? = null
     ) : RoomsResponseDto
+
+    @GET("room/{roomID}")
+    suspend fun getRoomById(@Path("roomID") roomId: String): RoomDto
+
+    @POST("room/{roomID}/incidents")
+    suspend fun createIncident(
+        @Path("roomID") roomId: String,
+        @Body body: Map<String, String>
+    )
+
+    @GET("room/{roomID}/incidents/my")
+    suspend fun getMyIncidentsByRoom(
+        @Path("roomID") roomId: String
+    ): IncidentsResponseDto
 
     @GET("review/room/{roomID}")
     suspend fun getReviewsByRoom(@Path("roomID") roomId: String): List<ReviewDto>

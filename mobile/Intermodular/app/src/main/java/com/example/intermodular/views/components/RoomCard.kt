@@ -109,7 +109,7 @@ fun RoomCard(
                     }
                     
                      Text(
-                        text = if (room.isAvailable) "Disponible" else "En mantenimiento",
+                        text = if (room.isAvailable) "Disponible" else "Próximamente libre",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (room.isAvailable) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                     )

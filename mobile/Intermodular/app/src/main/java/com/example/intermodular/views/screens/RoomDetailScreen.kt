@@ -148,6 +148,15 @@ fun RoomDetailScreen(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
+
+                    if (currentRoom.status == "maintenance" || currentRoom.status == "blocked") {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Próximamente libre",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     

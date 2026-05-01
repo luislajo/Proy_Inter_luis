@@ -13,6 +13,8 @@ import com.example.intermodular.models.Room
  * @return El modelo de dominio [Room].
  */
 fun RoomDto.toDomain(): Room {
+    val s = status?.trim()?.lowercase()
+    val reservable = s != "maintenance" && s != "blocked"
     return Room(
         id = _id,
         type = type,
@@ -26,7 +28,9 @@ fun RoomDto.toDomain(): Room {
         offer = offer,
         extras = extras,
         extraImages = extraImages,
-        isAvailable = isAvailable,
+        status = s,
+        // business rule: allow reserve unless maintenance/blocked
+        isAvailable = reservable,
         rate = rate
     )
 }

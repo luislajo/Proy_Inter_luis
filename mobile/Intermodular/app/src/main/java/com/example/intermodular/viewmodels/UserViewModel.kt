@@ -5,12 +5,18 @@ import androidx.lifecycle.viewModelScope
 import com.example.intermodular.data.remote.ApiErrorHandler
 import com.example.intermodular.data.remote.auth.SessionManager
 import com.example.intermodular.data.remote.dto.UpdateUserRequestDto
+import com.example.intermodular.data.repository.BookingRepository
+import com.example.intermodular.data.repository.IncidentRepository
+import com.example.intermodular.data.repository.RoomRepository
 import com.example.intermodular.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.example.intermodular.models.UserModel
+import com.example.intermodular.models.Booking
+import com.example.intermodular.models.Incident
 import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
+import java.time.LocalDate
 
 /**
  * Estado de UI para la pantalla de usuario.
@@ -23,7 +29,10 @@ import okhttp3.MultipartBody
  */
 data class UserUiState(
     val isLoading: Boolean = false,
-    val user: UserModel? = null
+    val user: UserModel? = null,
+    val currentStay: Booking? = null,
+    val currentStayRoomNumber: String? = null,
+    val myIncidents: List<Incident> = emptyList()
 )
 
 /**
@@ -49,7 +58,10 @@ data class UserUiState(
  */
 class UserViewModel(
     private val repository: UserRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val bookingRepository: BookingRepository,
+    private val incidentRepository: IncidentRepository,
+    private val roomRepository: RoomRepository
 ) : ViewModel() {
 
     // Estado interno mutable
@@ -89,16 +101,55 @@ class UserViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             runCatching {
-                repository.getMe()
-            }.onSuccess { user ->
+                val me = repository.getMe()
+                val bookings = bookingRepository.getBookingsByUserId(userId)
+                val today = LocalDate.now()
+                val current = bookings.firstOrNull { b ->
+                    b.status == "Abierta" && ( !today.isBefore(b.checkInDate) && today.isBefore(b.checkOutDate) )
+                }
+
+                val incidents = if (current != null) {
+                    incidentRepository.getMyIncidents(current.roomId)
+                } else {
+                    emptyList()
+                }
+
+                val roomNumber = if (current != null) {
+                    runCatching { roomRepository.getRoomById(current.roomId).roomNumber }.getOrNull()
+                } else null
+
+                Quadruple(me, current, incidents, roomNumber)
+            }.onSuccess { data ->
                 _uiState.value = UserUiState(
                     isLoading = false,
-                    user = user
+                    user = data.first,
+                    currentStay = data.second,
+                    myIncidents = data.third,
+                    currentStayRoomNumber = data.fourth
                 )
             }.onFailure { throwable ->
                 _uiState.value = _uiState.value.copy(isLoading = false)
                 _errorMessage.value =
                     ApiErrorHandler.getErrorMessage(throwable)
+            }
+        }
+    }
+
+    private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
+    fun reportProblem(type: String, severity: String, description: String) {
+        val stay = _uiState.value.currentStay ?: run {
+            _errorMessage.value = "No tienes una estancia activa"
+            return
+        }
+        viewModelScope.launch {
+            runCatching {
+                incidentRepository.createIncident(stay.roomId, type, severity, description)
+                incidentRepository.getMyIncidents(stay.roomId)
+            }.onSuccess { list ->
+                _uiState.value = _uiState.value.copy(myIncidents = list)
+            }.onFailure { throwable ->
+                _errorMessage.value = ApiErrorHandler.getErrorMessage(throwable)
             }
         }
     }

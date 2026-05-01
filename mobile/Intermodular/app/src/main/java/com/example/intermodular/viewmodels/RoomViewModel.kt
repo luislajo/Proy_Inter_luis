@@ -123,7 +123,8 @@ class RoomViewModel(
     fun filter() {
         _currentFilter.value = RoomFilter(
             type = _type.value.ifBlank { null },
-            isAvailable = if (_isAvailable.value) true else null,
+            // do not forward server-side availability; reservable rule handled client-side
+            isAvailable = null,
             minPrice = _minPrice.value.toDouble(),
             maxPrice = _maxPrice.value.toDouble(),
             guests = _guests.value.toIntOrNull(),

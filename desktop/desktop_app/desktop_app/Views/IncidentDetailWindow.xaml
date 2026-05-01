@@ -1,0 +1,153 @@
+<Window x:Class="desktop_app.Views.IncidentDetailWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Detalle incidencia"
+        Width="820"
+        Height="720"
+        WindowStartupLocation="CenterOwner"
+        Background="#F8F6F0">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Detalle incidencia"
+                   FontSize="22"
+                   FontWeight="Bold"
+                   Margin="0,0,0,12"/>
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel>
+                <Border Background="#FFFFFF" CornerRadius="14" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="{Binding HeaderText}" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding Incident.Description}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#FFFFFF" CornerRadius="14" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Empleado asignado (id)" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,10">
+                            <TextBox Style="{StaticResource TextBoxForm}"
+                                     Width="320"
+                                     Text="{Binding AssignEmployeeId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Style="{StaticResource SaveBtn}" Content="Asignar" Margin="10,0,0,0" Command="{Binding AssignCommand}"/>
+                        </StackPanel>
+
+                        <Button Style="{StaticResource SaveBtn}" Content="Marcar resuelta" Command="{Binding ResolveCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#FFFFFF" CornerRadius="14" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Notas internas" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,10">
+                            <TextBox Style="{StaticResource TextBoxForm}"
+                                     Width="320"
+                                     Text="{Binding NewInternalNote, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Style="{StaticResource SaveBtn}" Content="Añadir" Margin="10,0,0,0" Command="{Binding AddNoteCommand}"/>
+                        </StackPanel>
+
+                        <ListView x:Name="IncidentNotesListView"
+                                  ItemsSource="{Binding Incident.InternalNotes}"
+                                  SizeChanged="ListView_SizeChanged"
+                                  AlternationCount="2"
+                                  ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
+                                  BorderThickness="0.5">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Fecha" HeaderContainerStyle="{StaticResource TableHeader}" Width="150">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding CreatedAt, StringFormat='dd/MM/yyyy HH:mm'}" Style="{StaticResource GridViewCellText}"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Nota" HeaderContainerStyle="{StaticResource TableHeader}">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Note}" TextWrapping="Wrap" Style="{StaticResource GridViewCellText}"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#FFFFFF" CornerRadius="14" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Historial incidencia" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <ListView x:Name="IncidentHistoryListView"
+                                  ItemsSource="{Binding Incident.History}"
+                                  SizeChanged="ListView_SizeChanged"
+                                  AlternationCount="2"
+                                  ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
+                                  BorderThickness="0.5">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Fecha" HeaderContainerStyle="{StaticResource TableHeader}" Width="150">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding At, StringFormat='dd/MM/yyyy HH:mm'}" Style="{StaticResource GridViewCellText}"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Acción" HeaderContainerStyle="{StaticResource TableHeader}" Width="160">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Action}" Style="{StaticResource GridViewCellText}"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="#FFFFFF" CornerRadius="14" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="Historial estado habitación" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <ListView x:Name="RoomStatusHistoryListView"
+                                  ItemsSource="{Binding RoomStatusHistory}"
+                                  SizeChanged="ListView_SizeChanged"
+                                  AlternationCount="2"
+                                  ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
+                                  BorderThickness="0.5">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Fecha" HeaderContainerStyle="{StaticResource TableHeader}" Width="150">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding changed_at, StringFormat='dd/MM/yyyy HH:mm'}" Style="{StaticResource GridViewCellText}"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="De" HeaderContainerStyle="{StaticResource TableHeader}" Width="95">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding previous_status}" Style="{StaticResource GridViewCellText}"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="A" HeaderContainerStyle="{StaticResource TableHeader}" Width="110">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding new_status}" Style="{StaticResource GridViewCellText}"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
+

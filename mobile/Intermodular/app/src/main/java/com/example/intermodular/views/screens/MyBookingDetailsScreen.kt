@@ -172,6 +172,27 @@ fun MyBookingDetailsScreen(
                         color = MaterialTheme.colorScheme.secondary
                     )
 
+                    // Banner opcional: habitación lista para check-in
+                    room?.status?.let { rs ->
+                        Spacer(modifier = Modifier.height(10.dp))
+                        val ready = rs == "available"
+                        val bg = if (ready) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                        val fg = if (ready) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(bg, shape = MaterialTheme.shapes.medium)
+                                .padding(12.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Text(
+                                text = if (ready) "Habitación lista para check-in" else "Habitación aún no lista para check-in",
+                                color = fg,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(24.dp))
 
                     // FORMULARIO DE EDICIÓN DE RESERVA
