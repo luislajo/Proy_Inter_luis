@@ -2,8 +2,11 @@ using desktop_app.Commands;
 using desktop_app.Models;
 using desktop_app.Services;
 using desktop_app.ViewModels;
+using desktop_app.Views;
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
@@ -18,17 +21,16 @@ namespace desktop_app.ViewModels.Room
         }
 
         private readonly RoomModel _room;
-        private readonly Window _window;
 
         public string TitleText => $"Habitación {_room.RoomNumber} ({_room.Type})";
 
         public List<StatusOption> StatusOptions { get; } = new()
         {
-            new StatusOption{ Value = "available", Label = "Disponible" },
-            new StatusOption{ Value = "occupied", Label = "Ocupada" },
-            new StatusOption{ Value = "cleaning", Label = "Limpieza" },
-            new StatusOption{ Value = "maintenance", Label = "Mantenimiento" },
-            new StatusOption{ Value = "blocked", Label = "Bloqueada" }
+            new StatusOption { Value = "available", Label = "Disponible" },
+            new StatusOption { Value = "occupied", Label = "Ocupada" },
+            new StatusOption { Value = "cleaning", Label = "Limpieza" },
+            new StatusOption { Value = "maintenance", Label = "Mantenimiento" },
+            new StatusOption { Value = "blocked", Label = "Bloqueada" }
         };
 
         private string _selectedStatus;
@@ -52,26 +54,54 @@ namespace desktop_app.ViewModels.Room
             set => SetProperty(ref _estimatedMinutesText, value);
         }
 
-        public ICommand CancelCommand { get; }
-        public AsyncRelayCommand SaveCommand { get; }
-
-        public ChangeRoomStatusViewModel(RoomModel room, Window window)
+        private ObservableCollection<RoomStatusLogEntry> _history = new();
+        public ObservableCollection<RoomStatusLogEntry> History
         {
-            _room = room;
-            _window = window;
-
-            _selectedStatus = string.IsNullOrWhiteSpace(room.Status) ? "available" : room.Status;
-
-            CancelCommand = new RelayCommand(_ =>
-            {
-                _window.DialogResult = false;
-                _window.Close();
-            });
-
-            SaveCommand = new AsyncRelayCommand(SaveAsync);
+            get => _history;
+            set => SetProperty(ref _history, value);
         }
 
-        private async System.Threading.Tasks.Task SaveAsync()
+        public RelayCommand BackCommand { get; }
+        public AsyncRelayCommand SaveCommand { get; }
+
+        public ChangeRoomStatusViewModel(RoomModel room)
+        {
+            _room = room;
+            _selectedStatus = string.IsNullOrWhiteSpace(room.Status) ? "available" : room.Status;
+
+            BackCommand = new RelayCommand(_ => NavigateBackWithoutRefresh());
+            SaveCommand = new AsyncRelayCommand(SaveAsync);
+
+            _ = LoadHistoryAsync();
+        }
+
+        private static void NavigateBackWithoutRefresh()
+        {
+            NavigationService.Instance.NavigateTo<RoomView>();
+        }
+
+        private static void NavigateBackAndRefreshBoard()
+        {
+            NavigationService.Instance.NavigateTo<RoomView>();
+            if (NavigationService.Instance.CurrentView is not RoomView rv) return;
+            if (rv.DataContext is not RoomViewModel vm) return;
+            vm.RefreshCommand.Execute(null);
+        }
+
+        private async Task LoadHistoryAsync()
+        {
+            var items = await RoomService.GetRoomStatusLogAsync(_room.Id);
+            if (items == null)
+            {
+                History = new ObservableCollection<RoomStatusLogEntry>();
+                return;
+            }
+
+            var ordered = items.OrderByDescending(x => x.ChangedAt).ToList();
+            History = new ObservableCollection<RoomStatusLogEntry>(ordered);
+        }
+
+        private async Task SaveAsync()
         {
             var status = (SelectedStatus ?? "").Trim().ToLowerInvariant();
             var reason = string.IsNullOrWhiteSpace(Reason) ? null : Reason.Trim();
@@ -101,9 +131,8 @@ namespace desktop_app.ViewModels.Room
                 return;
             }
 
-            _window.DialogResult = true;
-            _window.Close();
+            await LoadHistoryAsync();
+            NavigateBackAndRefreshBoard();
         }
     }
 }
-

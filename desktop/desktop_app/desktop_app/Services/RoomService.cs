@@ -1,4 +1,4 @@
-﻿using desktop_app.Models;
+using desktop_app.Models;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -21,6 +21,12 @@ namespace desktop_app.Services
                 PropertyNameCaseInsensitive = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
+
+        /// <summary>
+        /// Respuestas de la API en snake_case (<c>changed_by</c>, <c>room_id</c>, …): sin camelCase policy para no interferir con <see cref="JsonPropertyName"/>.
+        /// </summary>
+        private static readonly JsonSerializerOptions _statusLogJsonOptions =
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
         public static async Task<List<RoomModel>?> GetRoomsStatusBoardAsync()
         {
@@ -73,7 +79,7 @@ namespace desktop_app.Services
                 var resp = await ApiService._httpClient.GetAsync(url);
                 if (!resp.IsSuccessStatusCode) return new List<RoomStatusLogEntry>();
                 var json = await resp.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<List<RoomStatusLogEntry>>(json, _jsonOptions) ?? new List<RoomStatusLogEntry>();
+                return JsonSerializer.Deserialize<List<RoomStatusLogEntry>>(json, _statusLogJsonOptions) ?? new List<RoomStatusLogEntry>();
             }
             catch
             {

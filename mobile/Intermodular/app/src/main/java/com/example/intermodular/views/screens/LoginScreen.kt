@@ -103,7 +103,7 @@ fun LoginScreen(
 
         // Imagen de fondo semitransparente
         Image(
-            painter = painterResource(id = R.drawable.hotellogo),
+            painter = painterResource(id = R.drawable.hotelfinal),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.FillWidth,

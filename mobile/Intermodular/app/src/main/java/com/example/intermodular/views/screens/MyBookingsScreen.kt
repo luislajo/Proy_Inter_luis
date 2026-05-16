@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.views.screens
+package com.example.intermodular.views.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +15,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import com.example.intermodular.models.Booking
 import com.example.intermodular.models.Room
@@ -36,8 +35,6 @@ import com.example.intermodular.views.components.BookingCard
  * @param bookings - Lista de todas las reservas
  * @param rooms - Lista de todas las habitaciones
  * @param onDetailsButtonClick - Callback para evento click en el botón "Ver detalles"
- * @param invoiceOpening - Descarga de factura en curso (superposición ligera)
- * @param onOpenInvoice - Abre el PDF de factura para el id de reserva indicado
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,9 +43,7 @@ fun MyBookingsScreen(
     error : String?,
     bookings : List<Booking>,
     rooms : List<Room>,
-    onDetailsButtonClick: (String) -> Unit,
-    invoiceOpening: Boolean = false,
-    onOpenInvoice: (String) -> Unit = { _ -> }
+    onDetailsButtonClick: (String) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column (
@@ -100,24 +95,10 @@ fun MyBookingsScreen(
                         BookingCard(
                             booking = booking,
                             room = room,
-                            onDetailsButtonClick = onDetailsButtonClick,
-                            onInvoiceClick = if (booking.invoiceNumber != null) {
-                                { onOpenInvoice(booking.id) }
-                            } else null
+                            onDetailsButtonClick = onDetailsButtonClick
                         )
                     }
                 }
-            }
-        }
-
-        if (invoiceOpening) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f)),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -143,12 +124,10 @@ fun MyBookingsScreenState(
     viewModel: MyBookingsViewModel,
     navController: NavHostController
 ) {
-    val context = LocalContext.current
     val bookings by viewModel.bookings.collectAsStateWithLifecycle()
     val loading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.errorMessage.collectAsStateWithLifecycle()
     val rooms by viewModel.rooms.collectAsStateWithLifecycle()
-    val invoiceOpening by viewModel.invoiceOpening.collectAsStateWithLifecycle()
 
     MyBookingsScreen(
         loading = loading,
@@ -157,8 +136,6 @@ fun MyBookingsScreenState(
         rooms = rooms,
         onDetailsButtonClick = { bookingId ->
             navController.navigate("details/$bookingId")
-        },
-        invoiceOpening = invoiceOpening,
-        onOpenInvoice = { bookingId -> viewModel.openInvoicePdf(bookingId, context) }
+        }
     )
 }

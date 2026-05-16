@@ -137,23 +137,6 @@ class UserViewModel(
 
     private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 
-    fun reportProblem(type: String, severity: String, description: String) {
-        val stay = _uiState.value.currentStay ?: run {
-            _errorMessage.value = "No tienes una estancia activa"
-            return
-        }
-        viewModelScope.launch {
-            runCatching {
-                incidentRepository.createIncident(stay.roomId, type, severity, description)
-                incidentRepository.getMyIncidents(stay.roomId)
-            }.onSuccess { list ->
-                _uiState.value = _uiState.value.copy(myIncidents = list)
-            }.onFailure { throwable ->
-                _errorMessage.value = ApiErrorHandler.getErrorMessage(throwable)
-            }
-        }
-    }
-
     /**
      * Actualiza la foto de perfil del usuario.
      *

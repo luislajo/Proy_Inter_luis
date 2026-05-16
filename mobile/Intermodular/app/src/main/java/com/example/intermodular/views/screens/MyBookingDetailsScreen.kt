@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.views.screens
+package com.example.intermodular.views.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -14,24 +14,25 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.intermodular.BuildConfig
@@ -40,6 +41,8 @@ import com.example.intermodular.models.Room
 import com.example.intermodular.viewmodels.MyBookingDetailsViewModel
 import com.example.intermodular.views.components.BookingDataForm
 import androidx.compose.runtime.LaunchedEffect
+import com.example.intermodular.views.navigation.Routes
+import java.time.LocalDate
 
 /**
  * Pantalla de detalles y actualización de una reserva
@@ -73,6 +76,8 @@ import androidx.compose.runtime.LaunchedEffect
  * @param onCreateReviewClick - Callback al añadir una reseña
  * @param onReviewDescriptionChange - Callback al modificar la descripción de la reseña
  * @param onRatingChange - Callback al modificar la calificación de la reseña
+ * @param canReportIncident - True si hoy estás dentro del periodo de la reserva (para avisar incidencias)
+ * @param onOpenReportIncident - Abre la pantalla completa para escribir una incidencia
  */
 @Composable
 fun MyBookingDetailsScreen(
@@ -96,6 +101,8 @@ fun MyBookingDetailsScreen(
     onCreateReviewClick: () -> Unit,
     onReviewDescriptionChange: (String) -> Unit,
     onRatingChange: (Int) -> Unit,
+    canReportIncident: Boolean = false,
+    onOpenReportIncident: () -> Unit = {},
     invoiceOpening: Boolean = false,
     onOpenInvoice: () -> Unit = {}
 ) {
@@ -172,7 +179,7 @@ fun MyBookingDetailsScreen(
                         color = MaterialTheme.colorScheme.secondary
                     )
 
-                    // Banner opcional: habitación lista para check-in
+                    // Estado operativo de la habitación en el hotel (no es un paso que debas pulsar en la app)
                     room?.status?.let { rs ->
                         Spacer(modifier = Modifier.height(10.dp))
                         val ready = rs == "available"
@@ -182,13 +189,18 @@ fun MyBookingDetailsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(bg, shape = MaterialTheme.shapes.medium)
-                                .padding(12.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Text(
-                                text = if (ready) "Habitación lista para check-in" else "Habitación aún no lista para check-in",
+                                text = if (ready) {
+                                    "Habitación lista para tu llegada"
+                                } else {
+                                    "Habitación aún en preparación"
+                                },
                                 color = fg,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -205,26 +217,79 @@ fun MyBookingDetailsScreen(
                         onButtonClick = onUpdateClick,
                         onStartDateChange = onStartDateChange,
                         onEndDateChange = onEndDateChange,
-                        onGuestsDataChange = onGuestsChange
+                        onGuestsDataChange = onGuestsChange,
+                        showSubmitButton = false
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // BOTÓN DE CANCELAR
-                    Button(
-                        onClick = onCancelClick,
-                        modifier = Modifier.fillMaxWidth()
+                    // Actualizar y cancelar en la misma fila
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Cancelar reserva")
+                        Button(
+                            onClick = onUpdateClick,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Actualizar reserva")
+                        }
+                        Button(
+                            onClick = onCancelClick,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
+                        ) {
+                            Text("Cancelar reserva")
+                        }
                     }
 
-                    if (booking?.invoiceNumber != null) {
+                    // Factura e incidencias (solo durante la estancia)
+                    if (booking?.invoiceNumber != null || canReportIncident) {
                         Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = onOpenInvoice,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Ver factura (PDF)")
+                        val hasInvoice = booking?.invoiceNumber != null
+                        if (hasInvoice && canReportIncident) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = onOpenInvoice,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Ver factura (PDF)")
+                                }
+                                Button(
+                                    onClick = onOpenReportIncident,
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    )
+                                ) {
+                                    Text("Escribir incidencia")
+                                }
+                            }
+                        } else if (hasInvoice) {
+                            Button(
+                                onClick = onOpenInvoice,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Ver factura (PDF)")
+                            }
+                        } else {
+                            Button(
+                                onClick = onOpenReportIncident,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                )
+                            ) {
+                                Text("Escribir incidencia")
+                            }
                         }
                     }
 
@@ -319,6 +384,7 @@ fun MyBookingDetailsScreen(
 @Composable
 fun MyBookingDetailsState(
     viewModel: MyBookingDetailsViewModel,
+    navController: NavHostController,
     onNavigateToPayment: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -331,6 +397,13 @@ fun MyBookingDetailsState(
     val reviewCreated by viewModel.reviewCreated.collectAsStateWithLifecycle()
     val navigateToPayment by viewModel.navigateToPayment.collectAsStateWithLifecycle()
     val invoiceOpening by viewModel.invoiceOpening.collectAsStateWithLifecycle()
+
+    val today = LocalDate.now()
+    val canReportIncident = booking?.let { b ->
+        b.status == "Abierta" &&
+            !today.isBefore(b.checkInDate) &&
+            !today.isAfter(b.checkOutDate)
+    } ?: false
 
     MyBookingDetailsScreen(
         loading = loading,
@@ -356,6 +429,12 @@ fun MyBookingDetailsState(
         onReviewDescriptionChange = viewModel::onReviewDescriptionChange,
         onRatingChange = viewModel::onRatingChange,
         onCreateReviewClick = viewModel::createReview,
+        canReportIncident = canReportIncident,
+        onOpenReportIncident = {
+            room?.id?.let { rid ->
+                navController.navigate(Routes.ReportIncident.createRoute(rid))
+            }
+        },
         invoiceOpening = invoiceOpening,
         onOpenInvoice = { viewModel.openInvoicePdf(context) }
     )

@@ -21,7 +21,9 @@ namespace desktop_app.Services
         public static async Task<List<IncidentModel>?> GetIncidentsAsync(
             string? severity = null,
             string? status = null,
-            string? roomId = null
+            string? roomId = null,
+            DateTime? from = null,
+            DateTime? to = null
         )
         {
             try
@@ -30,6 +32,8 @@ namespace desktop_app.Services
                 if (!string.IsNullOrWhiteSpace(severity)) qs.Add($"severity={WebUtility.UrlEncode(severity)}");
                 if (!string.IsNullOrWhiteSpace(status)) qs.Add($"status={WebUtility.UrlEncode(status)}");
                 if (!string.IsNullOrWhiteSpace(roomId)) qs.Add($"roomId={WebUtility.UrlEncode(roomId)}");
+                if (from.HasValue) qs.Add($"from={WebUtility.UrlEncode(from.Value.ToString("yyyy-MM-dd"))}");
+                if (to.HasValue) qs.Add($"to={WebUtility.UrlEncode(to.Value.ToString("yyyy-MM-dd"))}");
 
                 var url = ApiService.BaseUrl + "incidents" + (qs.Count > 0 ? "?" + string.Join("&", qs) : "");
                 var resp = await ApiService._httpClient.GetAsync(url);

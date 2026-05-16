@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.views.navigation
+package com.example.intermodular.views.navigation
 
 /**
  * Clase que define todas las rutas de navegación
@@ -17,6 +17,13 @@ sealed class Routes(
     object Rooms : Routes("rooms")
 
     object User : Routes("user")
+
+    /**
+     * Formulario a pantalla completa para reportar incidencia en una habitación.
+     */
+    object ReportIncident : Routes("reportIncident/{roomId}") {
+        fun createRoute(roomId: String) = "reportIncident/$roomId"
+    }
     object  Login : Routes("login")
     object Register : Routes("register")
 

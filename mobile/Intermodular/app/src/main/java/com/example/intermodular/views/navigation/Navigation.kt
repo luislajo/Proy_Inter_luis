@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.views.navigation
+package com.example.intermodular.views.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -45,6 +45,7 @@ import com.example.intermodular.viewmodels.viewModelFactory.MyAuditHistoryViewMo
 import com.example.intermodular.viewmodels.PaymentViewModel
 import com.example.intermodular.viewmodels.viewModelFacotry.PaymentViewModelFactory
 import com.example.intermodular.views.screens.MyBookingDetailsState
+import com.example.intermodular.views.screens.ReportIncidentScreenState
 import com.example.intermodular.views.screens.NewBookingState
 import com.example.intermodular.views.screens.PaymentState
 import com.example.intermodular.views.screens.RoomDetailScreen
@@ -302,9 +303,23 @@ fun Navigation(
 
             MyBookingDetailsState(
                 viewModel = viewModel,
+                navController = navigationController,
                 onNavigateToPayment = { id ->
                     navigationController.navigate(Routes.Payment.createRoute(id))
                 }
+            )
+        }
+
+        composable(
+            route = Routes.ReportIncident.route,
+            arguments = listOf(
+                navArgument("roomId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val roomId = backStackEntry.arguments?.getString("roomId")!!
+            ReportIncidentScreenState(
+                roomId = roomId,
+                navController = navigationController
             )
         }
         

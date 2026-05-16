@@ -1,9 +1,11 @@
 /**
  * @file CRUD y listado filtrado de habitaciones; integra validación con `RoomEntryData` y auditoría vía middleware en rutas.
  */
+import mongoose from "mongoose";
 import { roomDatabaseModel, RoomEntryData } from "../models/roomsModel.js";
 import { auditLogModel } from "../models/auditLogModel.js";
 import { roomStatusLogModel } from "../models/roomStatusLogModel.js";
+import { resolveChangedByUserId } from "../lib/resolveChangedByFromJwt.js";
 
 /**
  * Crea una nueva habitación.
@@ -433,13 +435,16 @@ export const patchRoomStatus = async (req, res) => {
       const n = Number(estimatedRaw);
       if (Number.isFinite(n) && n >= 0) estimatedMinutes = Math.floor(n);
     }
+
+    const changedByVal = await resolveChangedByUserId(reqUser);
+
     await roomStatusLogModel.create({
       room_id: updated._id,
       previous_status: previousStatus ?? null,
       new_status: status,
       reason: reason,
       estimated_minutes: estimatedMinutes,
-      changed_by: reqUser.id ?? null,
+      changed_by: changedByVal,
       changed_by_role: reqUser.rol ?? "SYSTEM",
       changed_at: new Date()
     });
@@ -457,12 +462,17 @@ export const patchRoomStatus = async (req, res) => {
 export const getRoomStatusLog = async (req, res) => {
   try {
     const { roomID } = req.params;
-    const items = await roomStatusLogModel
+    if (!mongoose.isValidObjectId(roomID)) {
+      return res.status(400).json({ message: "roomID no válido" });
+    }
+
+    const logs = await roomStatusLogModel
       .find({ room_id: roomID })
       .sort({ changed_at: -1 })
       .limit(200)
       .lean();
-    return res.status(200).json(items);
+
+    return res.status(200).json(logs);
   } catch (err) {
     return res.status(400).json({ message: err.message });
   }

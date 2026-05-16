@@ -1,9 +1,9 @@
-﻿package com.example.intermodular.views.components
+package com.example.intermodular.views.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
@@ -72,15 +72,13 @@ fun ComboBox(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(
-                    type = ExposedDropdownMenuAnchorType.PrimaryEditable,
-                    enabled = true
-                )
+                .menuAnchor()
         )
 
-        ExposedDropdownMenu(
+        DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.exposedDropdownSize(matchTextFieldWidth = true)
         ) {
             options.forEach { option ->
                 DropdownMenuItem(

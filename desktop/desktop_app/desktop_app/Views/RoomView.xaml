@@ -288,7 +288,6 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -299,11 +298,16 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <DockPanel Grid.Row="0" LastChildFill="False">
-                                <TextBlock DockPanel.Dock="Left"
-                                           Text="Incidencias"
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Incidencias"
                                            Style="{StaticResource HeaderMainTitle}"/>
-                            </DockPanel>
+                                <TextBlock Text="{Binding IncidentSummaryText}"
+                                           FontSize="12"
+                                           Foreground="#D6EAF8"
+                                           VerticalAlignment="Center"
+                                           Margin="14,4,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
 
                             <Border Grid.Row="1"
                                     Background="#F7FAFD"
@@ -311,14 +315,18 @@
                                     Padding="12"
                                     Margin="0,14,0,0">
                                 <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="100"/>
                                         <ColumnDefinition Width="1.4*"/>
-                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
                                         <Label Content="Severidad" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
                                         <ComboBox Style="{StaticResource DropdownStyle}"
                                                   ItemsSource="{Binding IncidentSeverityOptions}"
@@ -327,7 +335,7 @@
                                                   SelectedValue="{Binding IncidentSeverityFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                     </StackPanel>
 
-                                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,10,10">
                                         <Label Content="Estado" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
                                         <ComboBox Style="{StaticResource DropdownStyle}"
                                                   ItemsSource="{Binding IncidentStatusOptions}"
@@ -336,55 +344,53 @@
                                                   SelectedValue="{Binding IncidentStatusFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                     </StackPanel>
 
-                                    <StackPanel Grid.Column="2" Margin="0,0,10,0">
-                                        <Label Content="Habitación (room_id)" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,10,10">
+                                        <Label Content="Habitación" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
                                         <TextBox Style="{StaticResource TextBoxForm}"
                                                  Text="{Binding IncidentRoomFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                     </StackPanel>
 
-                                    <Button Grid.Column="3"
-                                            Style="{StaticResource SaveBtn}"
-                                            Content="Buscar"
-                                            Command="{Binding LoadIncidentsCommand}"
-                                            VerticalAlignment="Bottom"
-                                            Height="38"
-                                            Width="120"/>
+                                    <StackPanel Grid.Row="0" Grid.Column="3" Margin="0,0,0,10">
+                                        <Label Content="Rango de fechas" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <DatePicker Width="200"
+                                                        Language="es-ES"
+                                                        SelectedDate="{Binding IncidentFilterFromDate, Mode=TwoWay}"
+                                                        Style="{StaticResource DatePickerForm}"/>
+                                            <TextBlock Text=" - " VerticalAlignment="Center" Margin="4,0"/>
+                                            <DatePicker Width="200"
+                                                        Language="es-ES"
+                                                        SelectedDate="{Binding IncidentFilterToDate, Mode=TwoWay}"
+                                                        Style="{StaticResource DatePickerForm}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="1"
+                                                Grid.ColumnSpan="4"
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Right">
+                                        <Button Style="{StaticResource ClearFiltersBtn}"
+                                                Content="Limpiar"
+                                                Command="{Binding ClearIncidentFiltersCommand}"
+                                                Height="38"
+                                                Padding="15,0"
+                                                Margin="0,0,10,0"
+                                                FontSize="14"/>
+                                        <Button Style="{StaticResource SaveBtn}"
+                                                Content="Buscar"
+                                                Command="{Binding LoadIncidentsCommand}"
+                                                Height="38"
+                                                Width="120"
+                                                FontSize="14"
+                                                FontWeight="SemiBold"/>
+                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </Grid>
                     </Border>
 
-                    <!-- Dashboard -->
-                    <Border Grid.Row="1" Background="#F7FAFD" CornerRadius="14" Padding="12" Margin="0,0,0,10">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                                <TextBlock Text="Abiertas (Baja)" Foreground="#6B7280"/>
-                                <TextBlock Text="{Binding OpenLowCount}" FontSize="20" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                                <TextBlock Text="Abiertas (Media)" Foreground="#6B7280"/>
-                                <TextBlock Text="{Binding OpenMediumCount}" FontSize="20" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                                <TextBlock Text="Abiertas (Alta)" Foreground="#6B7280"/>
-                                <TextBlock Text="{Binding OpenHighCount}" FontSize="20" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="3" HorizontalAlignment="Center">
-                                <TextBlock Text="Habitaciones afectadas" Foreground="#6B7280"/>
-                                <TextBlock Text="{Binding AffectedRoomsCount}" FontSize="20" FontWeight="Bold"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
                     <!-- Listado -->
-                    <Grid Grid.Row="2">
+                    <Grid Grid.Row="1">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
@@ -445,8 +451,19 @@
                                         <GridViewColumn Header="Estado" HeaderContainerStyle="{StaticResource TableHeader}" Width="110">
                                             <GridViewColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <Border Style="{StaticResource StatusTextStyle}">
-                                                        <TextBlock Text="{Binding StatusLabel}" Style="{StaticResource GridViewCellText}" Foreground="#ffffff"/>
+                                                    <Border Style="{StaticResource StatusTextStyle}"
+                                                            ToolTipService.InitialShowDelay="200"
+                                                            ToolTipService.ShowDuration="60000"
+                                                            Cursor="Help">
+                                                        <Border.ToolTip>
+                                                            <ToolTip MaxWidth="360">
+                                                                <TextBlock Text="{Binding Description}"
+                                                                           TextWrapping="Wrap"/>
+                                                            </ToolTip>
+                                                        </Border.ToolTip>
+                                                        <TextBlock Text="{Binding StatusLabel}"
+                                                                   Style="{StaticResource GridViewCellText}"
+                                                                   Foreground="#ffffff"/>
                                                     </Border>
                                                 </DataTemplate>
                                             </GridViewColumn.CellTemplate>
@@ -460,10 +477,13 @@
                                             </GridViewColumn.CellTemplate>
                                         </GridViewColumn>
 
-                                        <GridViewColumn Header="Descripción" HeaderContainerStyle="{StaticResource TableHeader}">
+                                        <GridViewColumn Header="Asignado a" HeaderContainerStyle="{StaticResource TableHeader}">
                                             <GridViewColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock Text="{Binding Description}" TextTrimming="CharacterEllipsis" Style="{StaticResource GridViewCellText}"/>
+                                                    <TextBlock Text="{Binding AssignedToDisplay}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Style="{StaticResource GridViewCellText}"
+                                                               ToolTip="{Binding AssignedToDisplay}"/>
                                                 </DataTemplate>
                                             </GridViewColumn.CellTemplate>
                                         </GridViewColumn>

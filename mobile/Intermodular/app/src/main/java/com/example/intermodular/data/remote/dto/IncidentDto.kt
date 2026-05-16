@@ -8,7 +8,9 @@ data class IncidentDto(
     val description: String,
     val status: String,
     val reported_at: String,
-    val resolved_at: String? = null
+    val resolved_at: String? = null,
+    /** Presente cuando personal del hotel ha tomado la incidencia */
+    val assigned_to: String? = null
 )
 
 data class IncidentsResponseDto(

@@ -1,6 +1,7 @@
 import { bookingDatabaseModel } from '../models/bookingModel.js';
 import { roomDatabaseModel } from '../models/roomsModel.js';
 import { roomStatusLogModel } from '../models/roomStatusLogModel.js';
+import { syncRoomOccupancyFromBookings } from './roomOccupancySync.js';
 
 /**
  * Marca como "Finalizada" las reservas en "Abierta" cuya fecha de check-out ya pasó.
@@ -38,22 +39,24 @@ export async function finalizePastBookings() {
         // default policy: do not override maintenance/blocked
         if (currentStatus === 'maintenance' || currentStatus === 'blocked') continue;
 
-        if (currentStatus !== 'cleaning') {
-            await roomDatabaseModel.updateOne(
-                { _id: roomId },
-                { $set: { status: 'cleaning', isAvailable: false } }
-            );
+        // Ya en limpieza (p. ej. lo marcó sync antes): no duplicar log ni update
+        if (currentStatus === 'cleaning') continue;
 
-            statusLogs.push({
-                room_id: roomId,
-                previous_status: currentStatus ?? null,
-                new_status: 'cleaning',
-                reason: 'auto-checkout (checkOutDate passed)',
-                changed_by: null,
-                changed_by_role: 'SYSTEM',
-                changed_at: new Date()
-            });
-        }
+        // Tras cerrar la reserva por check-out pasado → limpieza hasta que personal ponga disponible.
+        await roomDatabaseModel.updateOne(
+            { _id: roomId },
+            { $set: { status: 'cleaning', isAvailable: false } }
+        );
+
+        statusLogs.push({
+            room_id: roomId,
+            previous_status: currentStatus ?? null,
+            new_status: 'cleaning',
+            reason: 'auto-checkout (checkOutDate passed) → limpieza',
+            changed_by: null,
+            changed_by_role: 'SYSTEM',
+            changed_at: new Date()
+        });
     }
 
     if (statusLogs.length) {
@@ -67,6 +70,11 @@ export async function finalizePastBookings() {
             `[bookings] ${result.modifiedCount} reserva(s) marcadas como Finalizada (check-out pasado).`
         );
     }
+
+    await syncRoomOccupancyFromBookings().catch((err) =>
+        console.error('[rooms] Error sync ocupación tras finalizar reservas:', err)
+    );
+
     return result;
 }
 

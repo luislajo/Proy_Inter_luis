@@ -84,47 +84,27 @@ namespace desktop_app.ViewModels.Room
         public RoomModel? SelectedBoardRoom
         {
             get => _selectedBoardRoom;
-            set
-            {
-                if (SetProperty(ref _selectedBoardRoom, value))
-                {
-                    _ = LoadSelectedRoomStatusHistoryAsync();
-                }
-            }
+            set => SetProperty(ref _selectedBoardRoom, value);
         }
 
-        private ObservableCollection<RoomStatusLogEntry> _selectedRoomStatusHistory = new();
-        public ObservableCollection<RoomStatusLogEntry> SelectedRoomStatusHistory
-        {
-            get => _selectedRoomStatusHistory;
-            set => SetProperty(ref _selectedRoomStatusHistory, value);
-        }
-
+        /// <summary>Valores del formulario; el filtrado usa los aplicados al pulsar Buscar.</summary>
         private string _boardSearchText = "";
         public string BoardSearchText
         {
             get => _boardSearchText;
-            set
-            {
-                if (SetProperty(ref _boardSearchText, value))
-                {
-                    BoardRoomsView?.Refresh();
-                }
-            }
+            set => SetProperty(ref _boardSearchText, value);
         }
 
         private string _boardStatusFilter = "";
         public string BoardStatusFilter
         {
             get => _boardStatusFilter;
-            set
-            {
-                if (SetProperty(ref _boardStatusFilter, value))
-                {
-                    BoardRoomsView?.Refresh();
-                }
-            }
+            set => SetProperty(ref _boardStatusFilter, value);
         }
+
+        /// <summary>Criterios activos en la tabla (se actualizan solo con Buscar en el tablero).</summary>
+        private string _appliedBoardSearchText = "";
+        private string _appliedBoardStatusFilter = "";
 
         public List<StatusOption> RoomStatusOptions { get; } = new()
         {
@@ -198,6 +178,20 @@ namespace desktop_app.ViewModels.Room
             set => SetProperty(ref _incidentRoomFilter, value);
         }
 
+        private DateTime? _incidentFilterFromDate;
+        public DateTime? IncidentFilterFromDate
+        {
+            get => _incidentFilterFromDate;
+            set => SetProperty(ref _incidentFilterFromDate, value);
+        }
+
+        private DateTime? _incidentFilterToDate;
+        public DateTime? IncidentFilterToDate
+        {
+            get => _incidentFilterToDate;
+            set => SetProperty(ref _incidentFilterToDate, value);
+        }
+
         public List<StatusOption> IncidentSeverityOptions { get; } = new()
         {
             new StatusOption{ Value = "", Label = "Todas" },
@@ -210,6 +204,7 @@ namespace desktop_app.ViewModels.Room
         {
             new StatusOption{ Value = "", Label = "Todos" },
             new StatusOption{ Value = "open", Label = "Abiertas" },
+            new StatusOption{ Value = "in_progress", Label = "En proceso" },
             new StatusOption{ Value = "resolved", Label = "Resueltas" }
         };
 
@@ -243,7 +238,15 @@ namespace desktop_app.ViewModels.Room
         private int _affectedRoomsCount;
         public int AffectedRoomsCount { get => _affectedRoomsCount; set => SetProperty(ref _affectedRoomsCount, value); }
 
+        private string _incidentSummaryText = "";
+        public string IncidentSummaryText
+        {
+            get => _incidentSummaryText;
+            set => SetProperty(ref _incidentSummaryText, value);
+        }
+
         public AsyncRelayCommand LoadIncidentsCommand { get; }
+        public RelayCommand ClearIncidentFiltersCommand { get; }
         public AsyncRelayCommand ResolveIncidentCommand { get; }
         public AsyncRelayCommand AssignIncidentCommand { get; }
         public AsyncRelayCommand AddIncidentNoteCommand { get; }
@@ -381,13 +384,14 @@ namespace desktop_app.ViewModels.Room
             DeleteRoomCommand = new RelayCommand(async param => await DeleteRoomAsync(param as RoomModel));
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
 
-            LoadStatusBoardCommand = new AsyncRelayCommand(LoadStatusBoardAsync);
+            LoadStatusBoardCommand = new AsyncRelayCommand(ApplyBoardFiltersAndReloadAsync);
             OpenChangeStatusCommand = new RelayCommand(param => OpenChangeStatus(param as RoomModel));
 
             BoardRoomsView = CollectionViewSource.GetDefaultView(BoardRooms);
             BoardRoomsView.Filter = BoardRoomFilter;
 
             LoadIncidentsCommand = new AsyncRelayCommand(LoadIncidentsAsync);
+            ClearIncidentFiltersCommand = new RelayCommand(_ => ClearIncidentFilters());
             ResolveIncidentCommand = new AsyncRelayCommand(ResolveIncidentAsync);
             AssignIncidentCommand = new AsyncRelayCommand(AssignIncidentAsync);
             AddIncidentNoteCommand = new AsyncRelayCommand(AddIncidentNoteAsync);
@@ -470,6 +474,8 @@ namespace desktop_app.ViewModels.Room
         private async Task RefreshAsync()
         {
             await LoadRoomsAsync(_lastFilter);
+            await LoadIncidentsAsync();
+            await LoadStatusBoardAsync();
         }
 
         private void ClearFilters()
@@ -515,6 +521,14 @@ namespace desktop_app.ViewModels.Room
             StatusText = $"Resultados: {Rooms.Count}";
         }
 
+        /// <summary>Aplica estado y texto del tablero y recarga datos desde la API.</summary>
+        private async Task ApplyBoardFiltersAndReloadAsync()
+        {
+            _appliedBoardSearchText = (BoardSearchText ?? "").Trim();
+            _appliedBoardStatusFilter = BoardStatusFilter ?? "";
+            await LoadStatusBoardAsync();
+        }
+
         private async Task LoadStatusBoardAsync()
         {
             var items = await RoomService.GetRoomsStatusBoardAsync();
@@ -529,12 +543,12 @@ namespace desktop_app.ViewModels.Room
         {
             if (obj is not RoomModel r) return false;
 
-            var statusOk = string.IsNullOrWhiteSpace(BoardStatusFilter) ||
-                           string.Equals(r.Status ?? "", BoardStatusFilter, StringComparison.OrdinalIgnoreCase);
+            var statusOk = string.IsNullOrWhiteSpace(_appliedBoardStatusFilter) ||
+                           string.Equals(r.Status ?? "", _appliedBoardStatusFilter, StringComparison.OrdinalIgnoreCase);
 
             if (!statusOk) return false;
 
-            var q = (BoardSearchText ?? "").Trim();
+            var q = _appliedBoardSearchText;
             if (q.Length == 0) return true;
 
             return (r.RoomNumber ?? "").Contains(q, StringComparison.OrdinalIgnoreCase) ||
@@ -545,49 +559,97 @@ namespace desktop_app.ViewModels.Room
         {
             if (room == null) return;
             SelectedBoardRoom = room;
-            var win = new ChangeRoomStatusWindow(room);
-            var ok = win.ShowDialog();
-            if (ok == true)
-            {
-                _ = LoadStatusBoardAsync();
-            }
+            NavigationService.Instance.NavigateTo(() => new ChangeRoomStatusView(room));
         }
 
-        private async Task LoadSelectedRoomStatusHistoryAsync()
+        private static async Task<RoomModel?> FindRoomByRoomNumberTextAsync(string roomNumberText)
         {
-            if (SelectedBoardRoom == null)
+            var want = roomNumberText.Trim();
+            if (string.IsNullOrWhiteSpace(want)) return null;
+
+            var filtered = await RoomService.GetRoomsFilteredAsync(new RoomsFilter { RoomNumber = want });
+            if (filtered?.Items is { Count: > 0 } list)
             {
-                SelectedRoomStatusHistory = new ObservableCollection<RoomStatusLogEntry>();
-                return;
+                var exact = list.FirstOrDefault(r => string.Equals(r.RoomNumber?.Trim(), want, StringComparison.OrdinalIgnoreCase));
+                return exact ?? list[0];
             }
 
-            var items = await RoomService.GetRoomStatusLogAsync(SelectedBoardRoom.Id);
-            if (items == null)
-            {
-                SelectedRoomStatusHistory = new ObservableCollection<RoomStatusLogEntry>();
-                return;
-            }
-            SelectedRoomStatusHistory = new ObservableCollection<RoomStatusLogEntry>(items);
+            var board = await RoomService.GetRoomsStatusBoardAsync();
+            if (board == null) return null;
+            return board.FirstOrDefault(r => string.Equals(r.RoomNumber?.Trim(), want, StringComparison.OrdinalIgnoreCase));
         }
 
         private async Task LoadIncidentsAsync()
         {
             IncidentsStatusText = "Cargando incidencias...";
+
+            if (IncidentFilterFromDate.HasValue && IncidentFilterToDate.HasValue &&
+                IncidentFilterFromDate.Value.Date > IncidentFilterToDate.Value.Date)
+            {
+                IncidentsStatusText = "La fecha «desde» no puede ser posterior a «hasta»";
+                return;
+            }
+
+            string? roomIdParam = null;
+            var roomFilterInput = (IncidentRoomFilter ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(roomFilterInput))
+            {
+                var room = await FindRoomByRoomNumberTextAsync(roomFilterInput);
+                if (room == null)
+                {
+                    MessageBox.Show(
+                        $"No existe habitación con el número «{roomFilterInput}».",
+                        "Incidencias",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    Incidents = new ObservableCollection<IncidentModel>();
+                    IncidentsStatusText = "Número de habitación no encontrado.";
+                    IncidentSummaryText = "Abiertas baja 0 · media 0 · alta 0 · afectadas 0";
+                    return;
+                }
+
+                roomIdParam = room.Id;
+            }
+
+            var rawStatusFilter = (IncidentStatusFilter ?? "").Trim();
+            var statusForApi = rawStatusFilter switch
+            {
+                "" => null,
+                "in_progress" => "open",
+                _ => rawStatusFilter
+            };
+
             var items = await IncidentService.GetIncidentsAsync(
                 severity: IncidentSeverityFilter,
-                status: IncidentStatusFilter,
-                roomId: string.IsNullOrWhiteSpace(IncidentRoomFilter) ? null : IncidentRoomFilter.Trim()
+                status: statusForApi,
+                roomId: roomIdParam,
+                from: IncidentFilterFromDate,
+                to: IncidentFilterToDate
             );
             if (items == null)
             {
                 IncidentsStatusText = "Error conectando con la API.";
                 Incidents = new ObservableCollection<IncidentModel>();
+                IncidentSummaryText = "Abiertas baja 0 · media 0 · alta 0 · afectadas 0";
                 return;
             }
 
+            foreach (var it in items)
+            {
+                if (string.IsNullOrWhiteSpace(it.AssignedTo) && !string.IsNullOrWhiteSpace(it.AssignedToCamel))
+                    it.AssignedTo = it.AssignedToCamel;
+            }
+
+            if (string.Equals(rawStatusFilter, "in_progress", StringComparison.OrdinalIgnoreCase))
+            {
+                items = items.Where(i => i.HasAssignee).ToList();
+            }
+
+            items = ApplyIncidentDateFilter(items, IncidentFilterFromDate, IncidentFilterToDate);
+
             // Map room_id -> roomNumber for display
             var distinctRoomIds = items
-                .Select(i => i.RoomId)
+                .Select(i => !string.IsNullOrWhiteSpace(i.RoomId) ? i.RoomId : i.RoomIdCamel)
                 .Where(s => !string.IsNullOrWhiteSpace(s))
                 .Distinct()
                 .ToList();
@@ -595,19 +657,58 @@ namespace desktop_app.ViewModels.Room
             var map = new Dictionary<string, string>();
             foreach (var rid in distinctRoomIds)
             {
-                var r = await RoomService.GetRoomByIdAsync(rid);
+                var r = await RoomService.GetRoomByIdAsync(rid!);
                 if (r != null && !string.IsNullOrWhiteSpace(r.RoomNumber))
                 {
-                    map[rid] = r.RoomNumber;
+                    map[rid!] = r.RoomNumber;
                 }
             }
 
             foreach (var it in items)
             {
-                if (!string.IsNullOrWhiteSpace(it.RoomId) && map.TryGetValue(it.RoomId, out var num))
-                {
+                var rk = !string.IsNullOrWhiteSpace(it.RoomId) ? it.RoomId : it.RoomIdCamel;
+                if (!string.IsNullOrWhiteSpace(rk) && map.TryGetValue(rk.Trim(), out var num))
                     it.RoomNumber = num;
+            }
+
+            var assigneeIds = items
+                .Select(i => i.AssignedTo)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s!.Trim())
+                .Distinct()
+                .ToList();
+            var assigneeNames = new Dictionary<string, string>();
+            foreach (var aid in assigneeIds)
+            {
+                try
+                {
+                    var u = await UserService.GetClientByIdAsync(aid);
+                    if (u != null && !string.IsNullOrWhiteSpace(u.Id))
+                    {
+                        var name = $"{u.FirstName} {u.LastName}".Trim();
+                        assigneeNames[aid] = !string.IsNullOrWhiteSpace(name)
+                            ? name
+                            : (!string.IsNullOrWhiteSpace(u.Dni) ? u.Dni : u.Id);
+                    }
+                    else
+                    {
+                        assigneeNames[aid] = aid;
+                    }
                 }
+                catch
+                {
+                    assigneeNames[aid] = aid;
+                }
+            }
+
+            foreach (var it in items)
+            {
+                if (string.IsNullOrWhiteSpace(it.AssignedTo))
+                    it.AssignedToDisplay = "Sin asignar";
+                else if (assigneeNames.TryGetValue(it.AssignedTo.Trim(), out var nm))
+                    it.AssignedToDisplay = nm;
+                else
+                    it.AssignedToDisplay = it.AssignedTo.Trim();
             }
 
             Incidents = new ObservableCollection<IncidentModel>(items);
@@ -617,18 +718,58 @@ namespace desktop_app.ViewModels.Room
             OpenLowCount = open.Count(i => i.Severity == "low");
             OpenMediumCount = open.Count(i => i.Severity == "medium");
             OpenHighCount = open.Count(i => i.Severity == "high");
-            AffectedRoomsCount = open.Select(i => i.RoomId).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().Count();
+            AffectedRoomsCount = open
+                .Select(i => !string.IsNullOrWhiteSpace(i.RoomId) ? i.RoomId : i.RoomIdCamel)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+
+            IncidentSummaryText =
+                $"Abiertas baja {OpenLowCount} · media {OpenMediumCount} · alta {OpenHighCount} · afectadas {AffectedRoomsCount}";
+        }
+
+        private void ClearIncidentFilters()
+        {
+            IncidentSeverityFilter = "";
+            IncidentStatusFilter = "";
+            IncidentRoomFilter = "";
+            IncidentFilterFromDate = null;
+            IncidentFilterToDate = null;
+            _ = LoadIncidentsAsync();
+        }
+
+        private static List<IncidentModel> ApplyIncidentDateFilter(
+            IEnumerable<IncidentModel> items,
+            DateTime? fromDate,
+            DateTime? toDate)
+        {
+            var query = items;
+
+            if (fromDate.HasValue)
+            {
+                var from = fromDate.Value.Date;
+                query = query.Where(i => IncidentReportDay(i) >= from);
+            }
+
+            if (toDate.HasValue)
+            {
+                var to = toDate.Value.Date;
+                query = query.Where(i => IncidentReportDay(i) <= to);
+            }
+
+            return query.ToList();
+        }
+
+        private static DateTime IncidentReportDay(IncidentModel incident)
+        {
+            var dt = incident.ReportedAt;
+            return (dt.Kind == DateTimeKind.Utc ? dt.ToLocalTime() : dt).Date;
         }
 
         private void OpenIncidentDetail(IncidentModel? incident)
         {
             if (incident == null) return;
-            var win = new IncidentDetailWindow(incident.Id);
-            var ok = win.ShowDialog();
-            if (ok == true)
-            {
-                _ = LoadIncidentsAsync();
-            }
+            NavigationService.Instance.NavigateTo(() => new IncidentDetailWindow(incident.Id, () => _ = LoadIncidentsAsync()));
         }
 
         private async Task LoadIncidentDetailAsync()

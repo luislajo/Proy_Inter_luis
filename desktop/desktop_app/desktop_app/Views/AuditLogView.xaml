@@ -44,32 +44,66 @@
                         CornerRadius="14"
                         Padding="12"
                         Margin="0,14,0,0">
-                    <DockPanel LastChildFill="False">
-                        <!-- Botón buscar -->
-                        <Button DockPanel.Dock="Right"
-                                Style="{StaticResource SaveBtn}" Content="Buscar"
-                                Command="{Binding SearchCommand}"
-                                Height="38" Width="120" FontSize="14" FontWeight="SemiBold"
-                                VerticalAlignment="Bottom"/>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="1.4*"/>
+                        </Grid.ColumnDefinitions>
 
-                        <!-- Filtro acción -->
-                        <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
                             <Label Content="Acción" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
                             <ComboBox Style="{StaticResource DropdownStyle}"
-                                      Width="160"
                                       ItemsSource="{Binding FilterOptions}"
                                       SelectedItem="{Binding SelectedFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
 
-                        <!-- Filtro colección -->
-                        <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,10,10">
                             <Label Content="Colección" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
                             <ComboBox Style="{StaticResource DropdownStyle}"
-                                      Width="160"
                                       ItemsSource="{Binding FilterCollectionOptions}"
                                       SelectedItem="{Binding SelectedCollectionFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
-                    </DockPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,10">
+                            <Label Content="Rango de fechas" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                            <StackPanel Orientation="Horizontal">
+                                <DatePicker Width="160"
+                                            Language="es-ES"
+                                            SelectedDate="{Binding FilterFromDate, Mode=TwoWay}"
+                                            Style="{StaticResource DatePickerForm}"/>
+                                <TextBlock Text=" - " VerticalAlignment="Center" Margin="4,0"/>
+                                <DatePicker Width="160"
+                                            Language="es-ES"
+                                            SelectedDate="{Binding FilterToDate, Mode=TwoWay}"
+                                            Style="{StaticResource DatePickerForm}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1"
+                                    Grid.ColumnSpan="3"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right">
+                            <Button Style="{StaticResource ClearFiltersBtn}"
+                                    Content="Limpiar"
+                                    Command="{Binding ClearFiltersCommand}"
+                                    Height="38"
+                                    Padding="15,0"
+                                    Margin="0,0,10,0"
+                                    FontSize="14"/>
+                            <Button Style="{StaticResource SaveBtn}"
+                                    Content="Buscar"
+                                    Command="{Binding SearchCommand}"
+                                    Height="38"
+                                    Width="120"
+                                    FontSize="14"
+                                    FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Grid>
                 </Border>
             </Grid>
         </Border>
@@ -99,8 +133,10 @@
 
         <!-- ===== TABLA (scroll solo aquí; altura máxima para no expandir la ventana) ===== -->
         <ListView Grid.Row="2" 
+                  x:Name="AuditLogsListView"
                   ItemsSource="{Binding Logs}" 
                   SizeChanged="ListView_SizeChanged"
+                  MouseDoubleClick="AuditLogsListView_MouseDoubleClick"
                   AlternationCount="2" 
                   ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}" 
                   Margin="0,5,0,0" 
@@ -170,7 +206,19 @@
                                            Style="{StaticResource GridViewCellText}"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
-                        
+                    </GridViewColumn>
+
+                    <!-- Detalle -->
+                    <GridViewColumn Header="" HeaderContainerStyle="{StaticResource TableHeader}" Width="65">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource UpdateBookingBtn}"
+                                        Content="visibility"
+                                        ToolTip="Ver detalle (anterior vs nuevo)"
+                                        Command="{Binding DataContext.ViewAuditDetailCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                        CommandParameter="{Binding}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
                     </GridViewColumn>
                 </GridView>
             </ListView.View>

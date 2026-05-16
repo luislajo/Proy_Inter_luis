@@ -103,7 +103,7 @@ class MyAuditHistoryViewModel(
     }
 
     private fun String.toActionLabel(): String = when (this) {
-        "CREATE" -> "Check-in (reserva creada)"
+        "CREATE" -> "Check-in"
         "PAYMENT" -> "Pago"
         "UPDATE" -> "Cambio en la reserva"
         "CANCEL" -> "Reserva cancelada"

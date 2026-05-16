@@ -50,6 +50,20 @@ namespace desktop_app.ViewModels
             set => SetProperty(ref _selectedCollectionFilter, value);
         }
 
+        private DateTime? _filterFromDate;
+        public DateTime? FilterFromDate
+        {
+            get => _filterFromDate;
+            set => SetProperty(ref _filterFromDate, value);
+        }
+
+        private DateTime? _filterToDate;
+        public DateTime? FilterToDate
+        {
+            get => _filterToDate;
+            set => SetProperty(ref _filterToDate, value);
+        }
+
         // Indicador de carga
         private bool _isLoading;
         public bool IsLoading
@@ -70,12 +84,14 @@ namespace desktop_app.ViewModels
         public ICommand RefreshCommand { get; }
         public ICommand SearchCommand { get; }
         public ICommand ClearFiltersCommand { get; }
+        public ICommand ViewAuditDetailCommand { get; }
 
         public AuditLogViewModel()
         {
             RefreshCommand = new AsyncRelayCommand(LoadLogsAsync);
             SearchCommand = new RelayCommand(_ => ApplyFilter());
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
+            ViewAuditDetailCommand = new RelayCommand<AuditLogModel>(ViewAuditDetail);
 
             _ = LoadLogsAsync();
         }
@@ -110,6 +126,13 @@ namespace desktop_app.ViewModels
 
         private void ApplyFilter()
         {
+            if (FilterFromDate.HasValue && FilterToDate.HasValue &&
+                FilterFromDate.Value.Date > FilterToDate.Value.Date)
+            {
+                StatusText = "La fecha «desde» no puede ser posterior a «hasta»";
+                return;
+            }
+
             Logs.Clear();
 
             var filtered = _allLogs.AsEnumerable();
@@ -128,7 +151,19 @@ namespace desktop_app.ViewModels
                     l.EntityType.Equals(_selectedCollectionFilter, StringComparison.OrdinalIgnoreCase));
             }
 
-            foreach (var log in filtered)
+            if (FilterFromDate.HasValue)
+            {
+                var from = FilterFromDate.Value.Date;
+                filtered = filtered.Where(l => AuditFilterDay(l) >= from);
+            }
+
+            if (FilterToDate.HasValue)
+            {
+                var to = FilterToDate.Value.Date;
+                filtered = filtered.Where(l => AuditFilterDay(l) <= to);
+            }
+
+            foreach (var log in filtered.OrderByDescending(l => l.Timestamp))
                 Logs.Add(log);
 
             StatusText = $"Mostrando {Logs.Count} de {_allLogs.Count} registro(s)";
@@ -138,7 +173,21 @@ namespace desktop_app.ViewModels
         {
             SelectedFilter = "Todos";
             SelectedCollectionFilter = "Todas";
+            FilterFromDate = null;
+            FilterToDate = null;
             ApplyFilter();
+        }
+
+        private static DateTime AuditFilterDay(AuditLogModel log)
+        {
+            var dt = log.Timestamp;
+            return (dt.Kind == DateTimeKind.Utc ? dt.ToLocalTime() : dt).Date;
+        }
+
+        private void ViewAuditDetail(AuditLogModel? log)
+        {
+            if (log == null) return;
+            NavigationService.Instance.NavigateTo(() => new AuditDetailView(log));
         }
     }
 }

@@ -104,7 +104,7 @@ fun RegisterScreen(
         contentAlignment = Alignment.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.hotellogo),
+            painter = painterResource(id = R.drawable.hotelfinal),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.FillWidth,

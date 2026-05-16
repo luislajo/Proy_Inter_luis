@@ -21,6 +21,8 @@ namespace desktop_app.ViewModels
 
         public ObservableCollection<InvoiceModel> Invoices { get; } = new();
 
+        private readonly List<InvoiceModel> _invoiceCache = new();
+
         // Filtros de reservas
         private string _filterClientText = string.Empty;
         public string FilterClientText
@@ -38,6 +40,7 @@ namespace desktop_app.ViewModels
 
         public IReadOnlyList<string> BookingStatusOptions { get; } = new List<string> { "Todas", "Abierta", "Finalizada", "Cancelada" };
 
+        public IReadOnlyList<string> InvoiceStatusFilterOptions { get; } = new List<string> { "Todas", "Abierta", "Finalizada", "Cancelada" };
 
         private DateTime? _filterFromDate;
         public DateTime? FilterFromDate
@@ -83,6 +86,8 @@ namespace desktop_app.ViewModels
 
         public ICommand LoadInvoicesCommand { get; }
 
+        public ICommand ClearInvoiceFiltersCommand { get; }
+
         public ICommand DownloadInvoiceRowCommand { get; }
 
 
@@ -95,6 +100,27 @@ namespace desktop_app.ViewModels
                 _invoiceDocumentFilter = value;
                 OnPropertyChanged();
             }
+        }
+
+        private DateTime? _invoiceFilterFromDate;
+        public DateTime? InvoiceFilterFromDate
+        {
+            get => _invoiceFilterFromDate;
+            set => SetProperty(ref _invoiceFilterFromDate, value);
+        }
+
+        private DateTime? _invoiceFilterToDate;
+        public DateTime? InvoiceFilterToDate
+        {
+            get => _invoiceFilterToDate;
+            set => SetProperty(ref _invoiceFilterToDate, value);
+        }
+
+        private string _invoiceFilterStatus = "Todas";
+        public string InvoiceFilterStatus
+        {
+            get => _invoiceFilterStatus;
+            set => SetProperty(ref _invoiceFilterStatus, value);
         }
 
         private string _invoiceStatusText = "Cargando facturas...";
@@ -123,6 +149,7 @@ namespace desktop_app.ViewModels
             SearchBookingsCommand = new RelayCommand(_ => ApplyBookingFilters());
             ClearBookingFiltersCommand = new RelayCommand(_ => ClearBookingFilters());
             LoadInvoicesCommand = new AsyncRelayCommand(LoadInvoicesAsync);
+            ClearInvoiceFiltersCommand = new RelayCommand(_ => ClearInvoiceFilters());
             DownloadInvoiceRowCommand = new AsyncRelayCommand<InvoiceModel>(DownloadInvoiceRowAsync);
             BookingEvents.OnBookingChanged += async () => await LoadBookingsAsync();
         }
@@ -274,6 +301,7 @@ namespace desktop_app.ViewModels
             {
                 InvoiceStatusText = "Cargando facturas...";
                 Invoices.Clear();
+                _invoiceCache.Clear();
 
                 var filter = string.IsNullOrWhiteSpace(InvoiceDocumentFilter)
                     ? null
@@ -282,20 +310,82 @@ namespace desktop_app.ViewModels
                 var clientCache = new Dictionary<string, UserModel>();
                 foreach (var inv in items)
                 {
+                    NormalizeInvoiceDates(inv);
                     await EnrichInvoiceClientAsync(inv, clientCache);
-                    Invoices.Add(inv);
+                    _invoiceCache.Add(inv);
                 }
 
-                InvoiceStatusText = Invoices.Count == 0
-                    ? (filter == null
-                        ? "No hay facturas en la base de datos."
-                        : "Sin facturas para ese DNI/NIE.")
-                    : $"{Invoices.Count} factura(s) encontradas.";
+                ApplyInvoiceFilters(filter);
             }
             catch (Exception ex)
             {
                 InvoiceStatusText = "Error al cargar facturas.";
                 MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private static void NormalizeInvoiceDates(InvoiceModel inv)
+        {
+            inv.CheckInDate = ToLocalDatePreserve(inv.CheckInDate);
+            inv.CheckOutDate = ToLocalDatePreserve(inv.CheckOutDate);
+            if (inv.InvoiceDate.HasValue)
+                inv.InvoiceDate = ToLocalDatePreserve(inv.InvoiceDate.Value);
+        }
+
+        private static DateTime ToLocalDatePreserve(DateTime dt) =>
+            dt.Kind == DateTimeKind.Utc ? dt.ToLocalTime() : dt;
+
+        /// <summary>Fecha usada para filtrar: fecha de factura si existe; si no, fecha de entrada.</summary>
+        private static DateTime InvoiceFilterDay(InvoiceModel inv)
+        {
+            var dt = inv.InvoiceDate ?? inv.CheckInDate;
+            return dt.Date;
+        }
+
+        /// <param name="apiDocumentFilter">Texto DNI enviado a la API (null = todas).</param>
+        private void ApplyInvoiceFilters(string? apiDocumentFilter = null)
+        {
+            apiDocumentFilter ??= string.IsNullOrWhiteSpace(InvoiceDocumentFilter)
+                ? null
+                : InvoiceDocumentFilter.Trim();
+
+            IEnumerable<InvoiceModel> query = _invoiceCache;
+
+            if (InvoiceFilterFromDate.HasValue)
+            {
+                var from = InvoiceFilterFromDate.Value.Date;
+                query = query.Where(i => InvoiceFilterDay(i) >= from);
+            }
+
+            if (InvoiceFilterToDate.HasValue)
+            {
+                var to = InvoiceFilterToDate.Value.Date;
+                query = query.Where(i => InvoiceFilterDay(i) <= to);
+            }
+
+            if (!string.Equals(InvoiceFilterStatus, "Todas", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(i =>
+                    string.Equals(i.Status?.Trim(), InvoiceFilterStatus, StringComparison.OrdinalIgnoreCase));
+            }
+
+            Invoices.Clear();
+            foreach (var inv in query.OrderByDescending(InvoiceFilterDay))
+                Invoices.Add(inv);
+
+            if (_invoiceCache.Count == 0)
+            {
+                InvoiceStatusText = apiDocumentFilter == null
+                    ? "No hay facturas en la base de datos."
+                    : "Sin facturas para ese DNI/NIE.";
+            }
+            else if (Invoices.Count == 0)
+            {
+                InvoiceStatusText = "Ninguna factura coincide con los filtros aplicados.";
+            }
+            else
+            {
+                InvoiceStatusText = $"{Invoices.Count} factura(s) encontradas.";
             }
         }
 
@@ -311,6 +401,18 @@ namespace desktop_app.ViewModels
 
             inv.ClientDni = user.Dni ?? string.Empty;
             inv.ClientName = $"{user.FirstName} {user.LastName}".Trim();
+        }
+
+        private void ClearInvoiceFilters()
+        {
+            InvoiceDocumentFilter = string.Empty;
+            InvoiceFilterFromDate = null;
+            InvoiceFilterToDate = null;
+            InvoiceFilterStatus = "Todas";
+            if (_invoiceCache.Count > 0)
+                ApplyInvoiceFilters();
+            else
+                _ = LoadInvoicesAsync();
         }
 
         private Task DownloadInvoiceRowAsync(InvoiceModel invoice)

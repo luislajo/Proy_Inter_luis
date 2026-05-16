@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { incidentModel } from "../models/incidentModel.js";
 import { roomDatabaseModel } from "../models/roomsModel.js";
 import { roomStatusLogModel } from "../models/roomStatusLogModel.js";
+import { resolveChangedByUserId } from "../lib/resolveChangedByFromJwt.js";
 
 const CLIENT_ALLOWED_TYPES = new Set(["ruido", "limpieza", "averia"]);
 
@@ -69,13 +70,14 @@ export const createIncidentForRoom = async (req, res) => {
       room.isAvailable = false;
       await room.save();
 
+      const changedByMaintenance = await resolveChangedByUserId(reqUser);
       roomStatusLogModel.create({
         room_id: room._id,
         previous_status: prevStatus ?? null,
         new_status: "maintenance",
         reason: `incidencia grave: ${type}`,
         estimated_minutes: null,
-        changed_by: reqUser.id ?? null,
+        changed_by: changedByMaintenance,
         changed_by_role: reqUser.rol ?? "SYSTEM",
         changed_at: new Date()
       }).catch(() => {});
@@ -110,6 +112,20 @@ export const getIncidents = async (req, res) => {
 
     const assignedTo = normalizeStr(req.query?.assignedTo);
     if (assignedTo) q.assigned_to = assignedTo;
+
+    const from = req.query?.from ? new Date(String(req.query.from)) : null;
+    const to = req.query?.to ? new Date(String(req.query.to)) : null;
+    if ((from && !isNaN(from.getTime())) || (to && !isNaN(to.getTime()))) {
+      q.reported_at = {};
+      if (from && !isNaN(from.getTime())) {
+        from.setHours(0, 0, 0, 0);
+        q.reported_at.$gte = from;
+      }
+      if (to && !isNaN(to.getTime())) {
+        to.setHours(23, 59, 59, 999);
+        q.reported_at.$lte = to;
+      }
+    }
 
     const limitRaw = Number(req.query?.limit ?? 200);
     const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(500, limitRaw)) : 200;
@@ -255,13 +271,14 @@ export const resolveIncident = async (req, res) => {
           room.isAvailable = true;
           await room.save();
 
+          const changedByResolve = await resolveChangedByUserId(reqUser);
           roomStatusLogModel.create({
             room_id: room._id,
             previous_status: prevStatus ?? null,
             new_status: "available",
             reason: "resuelta última incidencia grave",
             estimated_minutes: null,
-            changed_by: reqUser.id ?? null,
+            changed_by: changedByResolve,
             changed_by_role: reqUser.rol ?? "SYSTEM",
             changed_at: new Date()
           }).catch(() => {});
@@ -336,7 +353,9 @@ export const getMyIncidentsForRoom = async (req, res) => {
     const items = await incidentModel
       .find({ room_id: roomID, reported_by: reqUser.id })
       .sort({ reported_at: -1 })
-      .select("room_id type severity description status reported_at resolved_at")
+      .select(
+        "room_id type severity description status reported_at resolved_at assigned_to"
+      )
       .lean();
 
     return res.status(200).json({ items });

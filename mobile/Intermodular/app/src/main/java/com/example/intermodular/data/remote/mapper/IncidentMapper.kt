@@ -15,7 +15,8 @@ fun IncidentDto.toDomain(): Incident {
         description = description,
         status = status,
         reportedAt = reported,
-        resolvedAt = resolved
+        resolvedAt = resolved,
+        assignedTo = assigned_to?.takeIf { it.isNotBlank() }
     )
 }
 

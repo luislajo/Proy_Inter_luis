@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using System.Net.Http.Json;
 using desktop_app.Models;
 
@@ -6,6 +6,13 @@ namespace desktop_app.Services;
 
 public class UserService
 {
+    public static async Task<List<UserModel>> GetUsersByRolAsync(string rol)
+    {
+        string url = $"{ApiService.BaseUrl}user/rol/{rol}";
+        var users = await ApiService._httpClient.GetFromJsonAsync<List<UserModel>>(url);
+        return users ?? new List<UserModel>();
+    }
+
     public static async Task<List<UserModel>> GetAllUsersAsync()
     {
         string url = $"{ApiService.BaseUrl}user/";

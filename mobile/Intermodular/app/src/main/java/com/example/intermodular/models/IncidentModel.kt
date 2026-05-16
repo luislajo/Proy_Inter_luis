@@ -10,12 +10,14 @@ data class Incident(
     val description: String,
     val status: String,
     val reportedAt: OffsetDateTime,
-    val resolvedAt: OffsetDateTime?
+    val resolvedAt: OffsetDateTime?,
+    val assignedTo: String? = null
 ) {
     val statusLabel: String
-        get() = when (status) {
-            "open" -> "Comunicado"
-            "resolved" -> "Resuelto"
+        get() = when {
+            status == "resolved" -> "Resuelto"
+            !assignedTo.isNullOrBlank() -> "En proceso"
+            status == "open" -> "Comunicado"
             else -> status
         }
 }

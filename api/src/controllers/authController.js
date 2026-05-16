@@ -35,14 +35,17 @@ export async function login(req, res) {
 
         const encoder = new TextEncoder();
 
+        const idStr = String(user._id);
         const token = await new SignJWT({
-            id: String(user._id),
+            id: idStr,
+            email: user.email,
             rol: user.rol,
             vipStatus: user.vipStatus,
         })
             .setProtectedHeader({ alg: "HS256" })
             .setIssuedAt()
             .setExpirationTime('1h')
+            .setSubject(idStr)
             .sign(encoder.encode(process.env.JWT_SECRET));
 
         return res.send({ token, rol: user.rol, id: String(user._id) });

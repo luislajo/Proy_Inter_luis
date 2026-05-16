@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.views.components
+package com.example.intermodular.views.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
  * @param onStartDateChange - Callback al cambiar la fecha de inicio
  * @param onEndDateChange - Callback al cambiar la fecha de fin
  * @param onGuestsDataChange - Callback al cambiar la cantidad de huéspedes
+ * @param showSubmitButton - Si es false, no se muestra el botón de enviar (p. ej. acciones en la pantalla padre)
  */
 @Composable
 fun BookingDataForm(
@@ -46,7 +47,8 @@ fun BookingDataForm(
     onButtonClick: () -> Unit,
     onStartDateChange: (Long?) -> Unit,
     onEndDateChange: (Long?) -> Unit,
-    onGuestsDataChange: (String) -> Unit
+    onGuestsDataChange: (String) -> Unit,
+    showSubmitButton: Boolean = true
 ) {
     Column() {
         Row( )
@@ -71,7 +73,7 @@ fun BookingDataForm(
                 BookingDatePicker(
                     onDateSelected = onEndDateChange,
                     selectedDateMillis = endDate,
-                    label = "Fecha de inicio:"
+                    label = "Fecha de fin:"
                 )
             }
         }
@@ -106,13 +108,15 @@ fun BookingDataForm(
             )
         }
 
-        Button(
-            onClick = onButtonClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = if (create) "Reservar" else "Actualizar reserva"
-            )
+        if (showSubmitButton) {
+            Button(
+                onClick = onButtonClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = if (create) "Reservar" else "Actualizar reserva"
+                )
+            }
         }
     }
 }

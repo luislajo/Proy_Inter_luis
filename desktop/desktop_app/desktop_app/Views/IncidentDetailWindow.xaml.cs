@@ -1,24 +1,25 @@
 using desktop_app.ViewModels.Room;
-using System.Windows;
+using System;
 using System.Windows.Controls;
 
 namespace desktop_app.Views
 {
-    public partial class IncidentDetailWindow : Window
+    public partial class IncidentDetailWindow : UserControl
     {
-        public IncidentDetailWindow(string incidentId)
+        public IncidentDetailWindow(string incidentId, Action? onResolved = null)
         {
             InitializeComponent();
-            Owner = Application.Current.MainWindow;
-            DataContext = new IncidentDetailViewModel(incidentId, this);
+            DataContext = new IncidentDetailViewModel(incidentId, onResolved, () =>
+            {
+                desktop_app.Services.NavigationService.Instance.NavigateTo<RoomView>();
+            });
         }
 
-        private void ListView_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void ListView_SizeChanged(object sender, System.Windows.SizeChangedEventArgs e)
         {
             if (sender is not ListView listView || listView.View is not GridView gridView)
                 return;
 
-            // Full width: keep fixed columns that already have Width, stretch the rest equally
             double fixedWidth = 0;
             int stretchCols = 0;
 
@@ -30,7 +31,6 @@ namespace desktop_app.Views
                     stretchCols++;
             }
 
-            // If all columns are fixed, nothing to do
             if (stretchCols <= 0)
                 return;
 
@@ -49,4 +49,3 @@ namespace desktop_app.Views
         }
     }
 }
-

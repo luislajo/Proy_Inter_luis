@@ -2,6 +2,7 @@ import { bookingDatabaseModel, BookingEntryData } from "../models/bookingModel.j
 import { roomDatabaseModel } from "../models/roomsModel.js"
 import mongoose from "mongoose";
 import { finalizeBookingDocumentIfPast, finalizePastBookings } from "../jobs/finalizePastBookings.js";
+import { syncRoomOccupancyFromBookings } from "../jobs/roomOccupancySync.js";
 import { userDatabaseModel } from "../models/usersModel.js";
 import { sendEmail } from "../lib/mail/mailing.js";
 import { auditLogModel } from "../models/auditLogModel.js";
@@ -504,6 +505,9 @@ export async function createBooking(req, res) {
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })
 
         const bdBooking = await booking.save()
+        syncRoomOccupancyFromBookings().catch((err) =>
+            console.error("[rooms] Error sync ocupación tras crear reserva:", err)
+        );
         // @ts-ignore - poblar es un método definido en el schema
         const populated = await bdBooking.poblar()
 
@@ -562,6 +566,9 @@ export async function cancelBooking(req, res) {
 
         booking.status = 'Cancelada';
         const bookingUpdated = await booking.save();
+        syncRoomOccupancyFromBookings().catch((err) =>
+            console.error("[rooms] Error sync ocupación tras cancelar reserva:", err)
+        );
 
         // @ts-ignore - poblar es un método definido en el schema
         const populated = await bookingUpdated.poblar();
@@ -628,6 +635,9 @@ export async function updateBooking(req, res) {
         }
 
         const updatedBooking = await bookingData.save();
+        syncRoomOccupancyFromBookings().catch((err) =>
+            console.error("[rooms] Error sync ocupación tras actualizar reserva:", err)
+        );
 
         return res.status(200).json(updatedBooking)
     }

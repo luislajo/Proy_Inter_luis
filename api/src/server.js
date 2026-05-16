@@ -1,5 +1,5 @@
 /**
- * @file Punto de entrada Express: middleware global, estáticos, montaje de routers y arranque (DB, email, job finalización reservas).
+ * @file Punto de entrada Express: middleware global, estáticos, montaje de routers y arranque (DB, email, jobs reservas/ocupación).
  */
 import express from "express";
 import dotenv from "dotenv";
@@ -11,6 +11,7 @@ import { fileURLToPath } from "url";
 import { connectEmail } from './lib/mail/mailing.js';
 import connectDB from './config/db.js';
 import { startFinalizePastBookingsJob } from './jobs/finalizePastBookings.js';
+import { startRoomOccupancySyncJob } from './jobs/roomOccupancySync.js';
 
 import bookingRouter from "./routers/bookingRouter.js";
 import roomsRouter from "./routers/roomsRouter.js";
@@ -24,6 +25,7 @@ import incidentsRouter from "./routers/incidentsRouter.js";
 dotenv.config();
 connectDB().then(() => {
   startFinalizePastBookingsJob();
+  startRoomOccupancySyncJob();
 });
 connectEmail();
 

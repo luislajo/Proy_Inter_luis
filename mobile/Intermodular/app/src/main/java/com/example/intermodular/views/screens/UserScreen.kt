@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.views.screens
+package com.example.intermodular.views.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -30,8 +30,9 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,9 +44,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.ColorPainter
@@ -115,7 +113,7 @@ fun UserScreen(
     currentStayRoomNumber: String? = null,
     incidents: List<Incident> = emptyList(),
     canReportProblem: Boolean = false,
-    onReportProblem: (type: String, severity: String, description: String) -> Unit = { _, _, _ -> }
+    onNavigateToReportIncident: () -> Unit = {}
 ) {
     when {
         // Indicador de carga
@@ -207,7 +205,7 @@ fun UserScreen(
                             }
                         }
 
-                        Divider()
+                        HorizontalDivider()
 
                         // Filas de datos personales
                         ProfileRow(
@@ -264,84 +262,69 @@ fun UserScreen(
 
                             Spacer(Modifier.height(12.dp))
 
-                            var showDialog by remember { mutableStateOf(false) }
-                            Button(onClick = { showDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = onNavigateToReportIncident,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                )
+                            ) {
                                 Text("Reportar incidencia")
                             }
 
-                            if (showDialog) {
-                                var category by remember { mutableStateOf("ruido") }
-                                var severity by remember { mutableStateOf("medium") }
-                                var description by remember { mutableStateOf("") }
+                            if (incidents.isNotEmpty()) {
+                                Spacer(Modifier.height(18.dp))
+                                Text(
+                                    text = "Mis incidencias",
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                Spacer(Modifier.height(12.dp))
 
-                                AlertDialog(
-                                    onDismissRequest = { showDialog = false },
-                                    title = { Text("Reportar incidencia") },
-                                    text = {
-                                        Column {
-                                            Text("Categoría")
-                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                TextButton(onClick = { category = "ruido" }) { Text(if (category=="ruido") "Ruido ✓" else "Ruido") }
-                                                TextButton(onClick = { category = "limpieza" }) { Text(if (category=="limpieza") "Limpieza ✓" else "Limpieza") }
-                                                TextButton(onClick = { category = "averia" }) { Text(if (category=="averia") "Avería ✓" else "Avería") }
-                                            }
-
-                                            Spacer(Modifier.height(10.dp))
-                                            Text("Severidad")
-                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                TextButton(onClick = { severity = "low" }) { Text(if (severity=="low") "Baja ✓" else "Baja") }
-                                                TextButton(onClick = { severity = "medium" }) { Text(if (severity=="medium") "Media ✓" else "Media") }
-                                                TextButton(onClick = { severity = "high" }) { Text(if (severity=="high") "Alta ✓" else "Alta") }
-                                            }
-
-                                            Spacer(Modifier.height(10.dp))
-                                            OutlinedTextField(
-                                                value = description,
-                                                onValueChange = { description = it },
-                                                label = { Text("Descripción") },
-                                                modifier = Modifier.fillMaxWidth(),
-                                                minLines = 3
+                                val fmt = DtFmt.ofPattern("dd/MM HH:mm")
+                                val recentIncidents = incidents.take(10)
+                                recentIncidents.forEachIndexed { index, inc ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = inc.type.replaceFirstChar { it.uppercase() },
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            Text(
+                                                text = inc.description,
+                                                maxLines = 2,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
-                                    },
-                                    confirmButton = {
-                                        TextButton(
-                                            onClick = {
-                                                onReportProblem(category, severity, description.trim())
-                                                showDialog = false
-                                            }
-                                        ) { Text("Enviar") }
-                                    },
-                                    dismissButton = {
-                                        TextButton(onClick = { showDialog = false }) { Text("Cancelar") }
+                                        Column(
+                                            horizontalAlignment = Alignment.End,
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = inc.statusLabel,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Text(
+                                                text = inc.reportedAt.format(fmt),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
                                     }
-                                )
-                            }
-
-                            Spacer(Modifier.height(16.dp))
-                            Text(
-                                text = "Mis incidencias",
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            Spacer(Modifier.height(8.dp))
-
-                            val fmt = DtFmt.ofPattern("dd/MM HH:mm")
-                            incidents.take(10).forEach { inc ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(text = inc.type.replaceFirstChar { it.uppercase() })
-                                        Text(text = inc.description, maxLines = 1)
-                                    }
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(text = inc.statusLabel, color = MaterialTheme.colorScheme.primary)
-                                        Text(text = inc.reportedAt.format(fmt), style = MaterialTheme.typography.bodySmall)
+                                    if (index < recentIncidents.lastIndex) {
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                                     }
                                 }
-                                Divider()
                             }
                         }
                     }
@@ -472,9 +455,9 @@ fun UserScreenState(
         currentStayRoomNumber = uiState.currentStayRoomNumber,
         incidents = uiState.myIncidents,
         canReportProblem = uiState.currentStay != null,
-        onReportProblem = { type, severity, description ->
-            if (description.isNotBlank()) {
-                viewModel.reportProblem(type, severity, description)
+        onNavigateToReportIncident = {
+            uiState.currentStay?.roomId?.let { rid ->
+                navigation.navigate(Routes.ReportIncident.createRoute(rid))
             }
         }
     )

@@ -12,6 +12,10 @@ namespace desktop_app.Models
         [JsonPropertyName("room_id")]
         public string RoomId { get; set; } = "";
 
+        /// <summary>Algunas respuestas JSON usan camelCase en lugar de snake_case.</summary>
+        [JsonPropertyName("roomId")]
+        public string? RoomIdCamel { get; set; }
+
         [JsonIgnore]
         public string RoomNumber { get; set; } = "";
 
@@ -32,6 +36,13 @@ namespace desktop_app.Models
 
         [JsonPropertyName("assigned_to")]
         public string? AssignedTo { get; set; }
+
+        [JsonPropertyName("assignedTo")]
+        public string? AssignedToCamel { get; set; }
+
+        /// <summary>Texto para grid (nombre o «Sin asignar»); se rellena al listar.</summary>
+        [JsonIgnore]
+        public string AssignedToDisplay { get; set; } = "Sin asignar";
 
         [JsonPropertyName("reported_at")]
         public DateTime ReportedAt { get; set; }
@@ -54,13 +65,25 @@ namespace desktop_app.Models
             _ => Severity
         };
 
+        /// <summary>Hay empleado asignado (JSON puede venir en snake_case o camelCase).</summary>
         [JsonIgnore]
-        public string StatusLabel => Status switch
+        public bool HasAssignee =>
+            !string.IsNullOrWhiteSpace(AssignedTo) || !string.IsNullOrWhiteSpace(AssignedToCamel);
+
+        [JsonIgnore]
+        public string StatusLabel
         {
-            "open" => "Abierta",
-            "resolved" => "Resuelta",
-            _ => Status
-        };
+            get
+            {
+                if (string.Equals(Status, "resolved", StringComparison.OrdinalIgnoreCase))
+                    return "Resuelta";
+                if (HasAssignee)
+                    return "En proceso";
+                if (string.Equals(Status, "open", StringComparison.OrdinalIgnoreCase))
+                    return "Comunicado";
+                return Status;
+            }
+        }
     }
 
     public class IncidentNote
@@ -73,6 +96,10 @@ namespace desktop_app.Models
 
         [JsonPropertyName("created_at")]
         public DateTime CreatedAt { get; set; }
+
+        /// <summary>Rellenado en cliente a partir de <see cref="AuthorId"/> (no viene del JSON).</summary>
+        [JsonIgnore]
+        public string AuthorLabel { get; set; } = "";
     }
 
     public class IncidentHistoryEntry
@@ -85,6 +112,10 @@ namespace desktop_app.Models
 
         [JsonPropertyName("at")]
         public DateTime At { get; set; }
+
+        /// <summary>Nombre mostrable; se rellena en cliente desde <see cref="By"/>.</summary>
+        [JsonIgnore]
+        public string ByLabel { get; set; } = "";
     }
 
     public class IncidentsResponse
