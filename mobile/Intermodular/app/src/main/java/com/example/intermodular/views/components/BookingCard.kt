@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.capitalize
@@ -104,6 +105,40 @@ fun BookingCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
+
+                if (!booking.checkInCode.isNullOrBlank() && booking.status == "Abierta") {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Check-in habitación ${room.roomNumber}: ${booking.checkInCode}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else if (booking.checkedOut && booking.isCheckOutDayToday) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Check-out completado",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF1565C0)
+                    )
+                } else if (booking.checkedIn && booking.isCheckInDayToday) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Check-in completado",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF2E7D32)
+                    )
+                } else if (booking.canSubmitCheckOut && booking.isCheckOutDayToday) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Check-out disponible",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF1565C0)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(4.dp))
 

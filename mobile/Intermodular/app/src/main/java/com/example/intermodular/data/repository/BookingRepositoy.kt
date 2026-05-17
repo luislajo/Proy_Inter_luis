@@ -1,10 +1,11 @@
-﻿package com.example.intermodular.data.repository
+package com.example.intermodular.data.repository
 
 import com.example.intermodular.data.remote.ApiService
 import com.example.intermodular.data.remote.auth.SessionManager
 import com.example.intermodular.data.remote.dto.AuditLogDto
 import com.example.intermodular.data.remote.dto.CreateBookingDto
 import com.example.intermodular.data.remote.dto.UpdateBookingDto
+import com.example.intermodular.data.remote.dto.CheckInRequestDto
 import com.example.intermodular.data.remote.mapper.toDomain
 import com.example.intermodular.models.Booking
 import kotlinx.coroutines.Dispatchers
@@ -186,6 +187,17 @@ class BookingRepository(
             guests = guests
         )
         return api.updateBooking(bookingId, dto).toDomain()
+    }
+
+    /**
+     * Registra el check-in con el código de 5 dígitos recibido por correo.
+     */
+    suspend fun verifyCheckIn(bookingId: String, code: String): Booking {
+        return api.verifyCheckIn(bookingId, CheckInRequestDto(code)).booking.toDomain()
+    }
+
+    suspend fun verifyCheckOut(bookingId: String): Booking {
+        return api.verifyCheckOut(bookingId).booking.toDomain()
     }
 
 }

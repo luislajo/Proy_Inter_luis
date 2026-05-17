@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -12,19 +14,14 @@ using desktop_app.Views;
 
 namespace desktop_app.ViewModels
 {
-    /// <summary>Fila editable de extra para la factura.</summary>
-    public class InvoiceExtraRow : ViewModelBase
+    /// <summary>Línea de concepto facturado (estancia o extra).</summary>
+    public class InvoiceBilledRow : ViewModelBase
     {
-        private bool _include = true;
         private string _name = "";
         private int _quantity = 1;
-        private decimal _unitPrice = 15m;
+        private decimal _unitPrice;
 
-        public bool Include
-        {
-            get => _include;
-            set => SetProperty(ref _include, value);
-        }
+        public bool IsStayLine { get; init; }
 
         public string Name
         {
@@ -35,14 +32,28 @@ namespace desktop_app.ViewModels
         public int Quantity
         {
             get => _quantity;
-            set => SetProperty(ref _quantity, value);
+            set
+            {
+                if (!SetProperty(ref _quantity, value)) return;
+                OnPropertyChanged(nameof(LineTotal));
+                OnPropertyChanged(nameof(LineTotalDisplay));
+            }
         }
 
         public decimal UnitPrice
         {
             get => _unitPrice;
-            set => SetProperty(ref _unitPrice, value);
+            set
+            {
+                if (!SetProperty(ref _unitPrice, value)) return;
+                OnPropertyChanged(nameof(LineTotal));
+                OnPropertyChanged(nameof(LineTotalDisplay));
+            }
         }
+
+        public decimal LineTotal => Math.Round(_quantity * _unitPrice, 2, MidpointRounding.AwayFromZero);
+
+        public string LineTotalDisplay => $"{LineTotal:N2} €";
     }
 
     /// <summary>Fila del panel resumen (previsualización del importe de factura).</summary>
@@ -67,6 +78,10 @@ namespace desktop_app.ViewModels
     {
         public const decimal FixedTaxRate = 21m;
 
+        private const string DefaultIssuerName = "Hotel Pere Maria";
+        private const string DefaultIssuerTaxId = "B84729163";
+        private const string DefaultIssuerAddress = "Av. de la Marina Baixa, 15, 03502 Benidorm, Alicante";
+
         private readonly string _bookingId;
         private readonly bool _returnToFormBooking;
 
@@ -84,7 +99,16 @@ namespace desktop_app.ViewModels
         private decimal? _snapshotRoomCatalogPricePerNight;
         private decimal _snapshotOfferPercent;
 
-        private readonly HashSet<InvoiceExtraRow> _extraRowsSubscribed = new();
+        private readonly HashSet<InvoiceBilledRow> _billedRowsSubscribed = new();
+
+        private string _issuerName = DefaultIssuerName;
+        private string _issuerTaxId = DefaultIssuerTaxId;
+        private string _issuerAddress = DefaultIssuerAddress;
+        private string _clientName = "";
+        private string _clientDni = "";
+        private string _clientEmail = "";
+        private string _clientCity = "";
+        private string _stayDatesText = "";
 
         private readonly AsyncRelayCommand _applyAndDownloadCommand;
         private readonly AsyncRelayCommand _downloadOnlyCommand;
@@ -93,9 +117,9 @@ namespace desktop_app.ViewModels
         {
             _bookingId = bookingId;
             _returnToFormBooking = returnToFormBooking;
-            ExtraRows = new ObservableCollection<InvoiceExtraRow>();
+            BilledRows = new ObservableCollection<InvoiceBilledRow>();
             InvoicePreviewLines = new ObservableCollection<InvoicePreviewLine>();
-            ExtraRows.CollectionChanged += ExtraRowsOnCollectionChanged;
+            BilledRows.CollectionChanged += BilledRowsOnCollectionChanged;
 
             BackCommand = new RelayCommand(_ => NavigateBack());
             _applyAndDownloadCommand = new AsyncRelayCommand(ApplyAndDownloadAsync, () => !IsLoading);
@@ -106,7 +130,7 @@ namespace desktop_app.ViewModels
             _ = LoadAsync();
         }
 
-        public ObservableCollection<InvoiceExtraRow> ExtraRows { get; }
+        public ObservableCollection<InvoiceBilledRow> BilledRows { get; }
 
         /// <summary>Líneas del resumen fiscal (misma base de cálculo que la API).</summary>
         public ObservableCollection<InvoicePreviewLine> InvoicePreviewLines { get; }
@@ -141,7 +165,55 @@ namespace desktop_app.ViewModels
             set => SetProperty(ref _roomSummary, value);
         }
 
-        public bool ShowExtrasEmptyHint => ExtraRows.Count == 0;
+        public bool ShowExtrasEmptyHint => BilledRows.Count(r => !r.IsStayLine) == 0;
+
+        public string IssuerName
+        {
+            get => _issuerName;
+            set => SetProperty(ref _issuerName, value);
+        }
+
+        public string IssuerTaxId
+        {
+            get => _issuerTaxId;
+            set => SetProperty(ref _issuerTaxId, value);
+        }
+
+        public string IssuerAddress
+        {
+            get => _issuerAddress;
+            set => SetProperty(ref _issuerAddress, value);
+        }
+
+        public string ClientName
+        {
+            get => _clientName;
+            set => SetProperty(ref _clientName, value);
+        }
+
+        public string ClientDni
+        {
+            get => _clientDni;
+            set => SetProperty(ref _clientDni, value);
+        }
+
+        public string ClientEmail
+        {
+            get => _clientEmail;
+            set => SetProperty(ref _clientEmail, value);
+        }
+
+        public string ClientCity
+        {
+            get => _clientCity;
+            set => SetProperty(ref _clientCity, value);
+        }
+
+        public string StayDatesText
+        {
+            get => _stayDatesText;
+            set => SetProperty(ref _stayDatesText, value);
+        }
 
         public string CompanyName
         {
@@ -168,65 +240,66 @@ namespace desktop_app.ViewModels
         private static decimal ToMoney(decimal value) =>
             Math.Round(value, 2, MidpointRounding.AwayFromZero);
 
-        private void ExtraRowsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        private void BilledRowsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             switch (e.Action)
             {
                 case NotifyCollectionChangedAction.Add:
                     if (e.NewItems != null)
                     {
-                        foreach (InvoiceExtraRow row in e.NewItems)
-                            AttachExtraRow(row);
+                        foreach (InvoiceBilledRow row in e.NewItems)
+                            AttachBilledRow(row);
                     }
                     break;
                 case NotifyCollectionChangedAction.Remove:
                     if (e.OldItems != null)
                     {
-                        foreach (InvoiceExtraRow row in e.OldItems)
-                            DetachExtraRow(row);
+                        foreach (InvoiceBilledRow row in e.OldItems)
+                            DetachBilledRow(row);
                     }
                     break;
                 case NotifyCollectionChangedAction.Replace:
                     if (e.OldItems != null)
                     {
-                        foreach (InvoiceExtraRow row in e.OldItems)
-                            DetachExtraRow(row);
+                        foreach (InvoiceBilledRow row in e.OldItems)
+                            DetachBilledRow(row);
                     }
                     if (e.NewItems != null)
                     {
-                        foreach (InvoiceExtraRow row in e.NewItems)
-                            AttachExtraRow(row);
+                        foreach (InvoiceBilledRow row in e.NewItems)
+                            AttachBilledRow(row);
                     }
                     break;
                 case NotifyCollectionChangedAction.Reset:
-                    foreach (var row in _extraRowsSubscribed.ToList())
-                        DetachExtraRow(row);
-                    foreach (var row in ExtraRows)
-                        AttachExtraRow(row);
+                    foreach (var row in _billedRowsSubscribed.ToList())
+                        DetachBilledRow(row);
+                    foreach (var row in BilledRows)
+                        AttachBilledRow(row);
                     break;
             }
 
+            OnPropertyChanged(nameof(ShowExtrasEmptyHint));
             RecalculateInvoicePreview();
         }
 
-        private void AttachExtraRow(InvoiceExtraRow row)
+        private void AttachBilledRow(InvoiceBilledRow row)
         {
-            if (!_extraRowsSubscribed.Add(row)) return;
-            row.PropertyChanged += ExtraRowOnPropertyChanged;
+            if (!_billedRowsSubscribed.Add(row)) return;
+            row.PropertyChanged += BilledRowOnPropertyChanged;
         }
 
-        private void DetachExtraRow(InvoiceExtraRow row)
+        private void DetachBilledRow(InvoiceBilledRow row)
         {
-            if (!_extraRowsSubscribed.Remove(row)) return;
-            row.PropertyChanged -= ExtraRowOnPropertyChanged;
+            if (!_billedRowsSubscribed.Remove(row)) return;
+            row.PropertyChanged -= BilledRowOnPropertyChanged;
         }
 
-        private void ExtraRowOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void BilledRowOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName is nameof(InvoiceExtraRow.Include)
-                or nameof(InvoiceExtraRow.Quantity)
-                or nameof(InvoiceExtraRow.UnitPrice)
-                or nameof(InvoiceExtraRow.Name))
+            if (sender is InvoiceBilledRow { IsStayLine: true }) return;
+            if (e.PropertyName is nameof(InvoiceBilledRow.Quantity)
+                or nameof(InvoiceBilledRow.UnitPrice)
+                or nameof(InvoiceBilledRow.Name))
                 RecalculateInvoicePreview();
         }
 
@@ -236,50 +309,24 @@ namespace desktop_app.ViewModels
             InvoicePreviewLines.Clear();
 
             decimal extrasSubtotal = 0m;
-            foreach (var r in ExtraRows)
+            foreach (var r in BilledRows.Where(r => !r.IsStayLine))
             {
-                if (!r.Include || string.IsNullOrWhiteSpace(r.Name)) continue;
+                if (string.IsNullOrWhiteSpace(r.Name)) continue;
                 extrasSubtotal += ToMoney(r.Quantity * r.UnitPrice);
             }
 
             extrasSubtotal = ToMoney(extrasSubtotal);
 
-            decimal offerPercent = Math.Min(100m, Math.Max(0m, _snapshotOfferPercent));
-
-            decimal listPricePerNight = _snapshotRoomCatalogPricePerNight is decimal catPn && catPn >= 0
-                ? ToMoney(catPn)
-                : offerPercent > 0 && offerPercent < 100
-                    ? ToMoney(_snapshotChargedPricePerNight / (1 - offerPercent / 100))
-                    : ToMoney(_snapshotChargedPricePerNight);
-
-            decimal nightsListSubtotal = ToMoney(_snapshotTotalNights * listPricePerNight);
             decimal nightsSubtotal = ToMoney(_snapshotTotalNights * _snapshotChargedPricePerNight);
-            decimal discountAmount =
-                offerPercent > 0 ? ToMoney(Math.Max(0, nightsListSubtotal - nightsSubtotal)) : 0m;
-
-            bool showDiscountBreakdown =
-                discountAmount > 0.005m && nightsListSubtotal > nightsSubtotal + 0.005m;
-
             decimal taxableBase = Math.Max(0, nightsSubtotal + extrasSubtotal);
             decimal taxAmount = ToMoney(taxableBase * (TaxRate / 100m));
             decimal grandTotal = ToMoney(taxableBase + taxAmount);
 
             string eur(decimal v) => $"{ToMoney(v):N2} EUR";
 
-            if (showDiscountBreakdown)
-            {
-                InvoicePreviewLines.Add(new InvoicePreviewLine($"Precio catálogo ({_snapshotTotalNights} noches)", eur(nightsListSubtotal)));
-                InvoicePreviewLines.Add(new InvoicePreviewLine($"Descuento habitación ({offerPercent:N0} %)", $"- {eur(discountAmount)}"));
-                InvoicePreviewLines.Add(new InvoicePreviewLine("Subtotal noches", eur(nightsSubtotal)));
-            }
-            else
-                InvoicePreviewLines.Add(new InvoicePreviewLine($"Subtotal noches", eur(nightsSubtotal)));
-
-            if (extrasSubtotal > 0)
-                InvoicePreviewLines.Add(new InvoicePreviewLine("Subtotal extras", eur(extrasSubtotal)));
-
+            InvoicePreviewLines.Add(new InvoicePreviewLine("Base imponible", eur(taxableBase)));
             InvoicePreviewLines.Add(new InvoicePreviewLine($"IVA ({TaxRate:N0} %)", eur(taxAmount)));
-            InvoicePreviewLines.Add(new InvoicePreviewLine("Total", eur(grandTotal), isTotalRow: true));
+            InvoicePreviewLines.Add(new InvoicePreviewLine("Total factura", eur(grandTotal), isTotalRow: true));
         }
 
         private void NavigateBack()
@@ -308,6 +355,17 @@ namespace desktop_app.ViewModels
                 _snapshotTotalNights = booking.TotalNights;
                 _snapshotChargedPricePerNight = booking.PricePerNight ?? 0m;
 
+                var issuer = booking.InvoiceIssuer;
+                IssuerName = string.IsNullOrWhiteSpace(issuer?.Name) ? DefaultIssuerName : issuer!.Name!;
+                IssuerTaxId = string.IsNullOrWhiteSpace(issuer?.TaxId) ? DefaultIssuerTaxId : issuer!.TaxId!;
+                IssuerAddress = string.IsNullOrWhiteSpace(issuer?.Address) ? DefaultIssuerAddress : issuer!.Address!;
+
+                var client = await UserService.GetClientByIdAsync(booking.Client);
+                ClientName = $"{client.FirstName} {client.LastName}".Trim();
+                ClientDni = client.Dni ?? "";
+                ClientEmail = client.Email ?? "";
+                ClientCity = client.CityName ?? "";
+
                 if (booking.InvoiceCompany != null)
                 {
                     CompanyName = booking.InvoiceCompany.Name ?? "";
@@ -319,26 +377,49 @@ namespace desktop_app.ViewModels
                 _snapshotRoomCatalogPricePerNight = room?.PricePerNight;
                 _snapshotOfferPercent = Math.Min(100m, Math.Max(0m, room?.Offer ?? booking.Offer ?? 0m));
 
-                if (room != null)
+                var roomLabel = room != null ? $"Habitación {room.RoomNumber} - {room.Type}" : "Habitación";
+                RoomSummary = roomLabel;
+                StayDatesText =
+                    $"{booking.CheckInDate:dd/MM/yyyy} – {booking.CheckOutDate:dd/MM/yyyy} · {_snapshotTotalNights} noches";
+
+                BilledRows.Clear();
+                var stayConcept = $"Alojamiento / {roomLabel}";
+                if (_snapshotOfferPercent > 0.005m)
+                    stayConcept += $"\nTarifa con descuento {_snapshotOfferPercent:N0} %";
+                BilledRows.Add(new InvoiceBilledRow
                 {
-                    RoomSummary = $"Habitación {room.RoomNumber} ({room.Type})";
+                    IsStayLine = true,
+                    Name = stayConcept,
+                    Quantity = Math.Max(1, _snapshotTotalNights),
+                    UnitPrice = _snapshotChargedPricePerNight
+                });
+
+                var savedExtras = booking.InvoiceBreakdown?.Extras;
+                if (savedExtras is { Count: > 0 })
+                {
+                    foreach (var ex in savedExtras)
+                    {
+                        if (string.IsNullOrWhiteSpace(ex.Name)) continue;
+                        BilledRows.Add(new InvoiceBilledRow
+                        {
+                            Name = ex.Name.Trim(),
+                            Quantity = Math.Max(1, ex.Quantity),
+                            UnitPrice = ex.UnitPrice
+                        });
+                    }
+                }
+                else if (room != null)
+                {
                     foreach (var ex in room.Extras)
                     {
                         if (string.IsNullOrWhiteSpace(ex)) continue;
-                        ExtraRows.Add(new InvoiceExtraRow { Name = ex.Trim(), Quantity = 1, UnitPrice = 15m, Include = true });
+                        BilledRows.Add(new InvoiceBilledRow { Name = ex.Trim(), Quantity = 1, UnitPrice = 15m });
                     }
 
                     if (room.ExtraBed)
-                        ExtraRows.Add(new InvoiceExtraRow { Name = "Cama extra", Quantity = 1, UnitPrice = 15m, Include = true });
+                        BilledRows.Add(new InvoiceBilledRow { Name = "Cama extra", Quantity = 1, UnitPrice = 15m });
                     if (room.Crib)
-                        ExtraRows.Add(new InvoiceExtraRow { Name = "Cuna", Quantity = 1, UnitPrice = 15m, Include = true });
-                }
-                else
-                {
-                    RoomSummary = string.IsNullOrWhiteSpace(RoomSummary)
-                        ? $"Reserva · {_snapshotTotalNights} noches"
-                        : RoomSummary;
-                    // Si no se puede cargar la habitación, igualmente permitimos continuar.
+                        BilledRows.Add(new InvoiceBilledRow { Name = "Cuna", Quantity = 1, UnitPrice = 15m });
                 }
 
                 OnPropertyChanged(nameof(ShowExtrasEmptyHint));
@@ -357,8 +438,8 @@ namespace desktop_app.ViewModels
 
         private object BuildPayload()
         {
-            var extras = ExtraRows
-                .Where(r => r.Include && !string.IsNullOrWhiteSpace(r.Name))
+            var extras = BilledRows
+                .Where(r => !r.IsStayLine && !string.IsNullOrWhiteSpace(r.Name))
                 .Select(r => new { name = r.Name.Trim(), quantity = r.Quantity, unitPrice = (double)r.UnitPrice })
                 .ToList();
 
@@ -389,6 +470,7 @@ namespace desktop_app.ViewModels
 
                 HasExistingInvoice = true;
                 await BookingEvents.RaiseBookingChanged();
+                await LoadAsync();
                 await OpenPdfAsync();
             }
             catch (Exception ex)

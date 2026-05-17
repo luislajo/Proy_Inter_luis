@@ -86,6 +86,8 @@ namespace desktop_app.ViewModels
 
         public ICommand LoadInvoicesCommand { get; }
 
+        public ICommand SearchInvoicesCommand { get; }
+
         public ICommand ClearInvoiceFiltersCommand { get; }
 
         public ICommand DownloadInvoiceRowCommand { get; }
@@ -149,6 +151,7 @@ namespace desktop_app.ViewModels
             SearchBookingsCommand = new RelayCommand(_ => ApplyBookingFilters());
             ClearBookingFiltersCommand = new RelayCommand(_ => ClearBookingFilters());
             LoadInvoicesCommand = new AsyncRelayCommand(LoadInvoicesAsync);
+            SearchInvoicesCommand = new RelayCommand(_ => SearchInvoices());
             ClearInvoiceFiltersCommand = new RelayCommand(_ => ClearInvoiceFilters());
             DownloadInvoiceRowCommand = new AsyncRelayCommand<InvoiceModel>(DownloadInvoiceRowAsync);
             BookingEvents.OnBookingChanged += async () => await LoadBookingsAsync();
@@ -343,11 +346,33 @@ namespace desktop_app.ViewModels
         }
 
         /// <param name="apiDocumentFilter">Texto DNI enviado a la API (null = todas).</param>
+        private void SearchInvoices()
+        {
+            if (InvoiceFilterFromDate.HasValue && InvoiceFilterToDate.HasValue &&
+                InvoiceFilterFromDate.Value.Date > InvoiceFilterToDate.Value.Date)
+            {
+                InvoiceStatusText = "La fecha «desde» no puede ser posterior a «hasta»";
+                return;
+            }
+
+            if (_invoiceCache.Count > 0)
+                ApplyInvoiceFilters();
+            else
+                _ = LoadInvoicesAsync();
+        }
+
         private void ApplyInvoiceFilters(string? apiDocumentFilter = null)
         {
             apiDocumentFilter ??= string.IsNullOrWhiteSpace(InvoiceDocumentFilter)
                 ? null
                 : InvoiceDocumentFilter.Trim();
+
+            if (InvoiceFilterFromDate.HasValue && InvoiceFilterToDate.HasValue &&
+                InvoiceFilterFromDate.Value.Date > InvoiceFilterToDate.Value.Date)
+            {
+                InvoiceStatusText = "La fecha «desde» no puede ser posterior a «hasta»";
+                return;
+            }
 
             IEnumerable<InvoiceModel> query = _invoiceCache;
 
@@ -385,7 +410,9 @@ namespace desktop_app.ViewModels
             }
             else
             {
-                InvoiceStatusText = $"{Invoices.Count} factura(s) encontradas.";
+                InvoiceStatusText = Invoices.Count == 1
+                    ? "1 factura encontrada"
+                    : $"{Invoices.Count} facturas encontradas";
             }
         }
 

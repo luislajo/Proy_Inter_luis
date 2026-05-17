@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.data.remote.dto
+package com.example.intermodular.data.remote.dto
 
 import com.squareup.moshi.Json
 import java.time.Instant
@@ -33,5 +33,17 @@ data class BookingDto (
     val status: String,
     val guests: Int,
     val totalNights: Int,
-    @Json(name = "invoice_number") val invoice_number: String? = null
+    @Json(name = "invoice_number") val invoice_number: String? = null,
+    val checkInCodeSentAt: Instant? = null,
+    val checkedInAt: Instant? = null,
+    val checkInCode: String? = null,
+    val checkInCodeSent: Boolean = false,
+    val checkedIn: Boolean = false,
+    val canSubmitCheckIn: Boolean = false,
+    val checkedOutAt: Instant? = null,
+    val checkedOut: Boolean = false,
+    val canSubmitCheckOut: Boolean = false,
+    val isCheckInDayToday: Boolean = false,
+    val isCheckOutDayToday: Boolean = false,
+    val stayWindowOpen: Boolean = false
 )

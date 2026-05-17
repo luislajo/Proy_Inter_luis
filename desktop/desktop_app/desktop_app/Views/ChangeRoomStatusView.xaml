@@ -120,26 +120,18 @@
                                                 <Border Style="{StaticResource RoomStatusPillByCodeStyle}"
                                                         Tag="{Binding PreviousStatus}">
                                                     <TextBlock Text="{Binding PreviousStatusSpanish}"
-                                                               Foreground="#ffffff"
-                                                               Padding="10,4"
-                                                               VerticalAlignment="Center"
-                                                               HorizontalAlignment="Center"
-                                                               FontSize="13"/>
+                                                               Style="{StaticResource RoomStatusPillTextStyle}"/>
                                                 </Border>
                                                 <TextBlock Text="→"
                                                            Margin="10,0"
                                                            VerticalAlignment="Center"
-                                                           FontSize="16"
-                                                           FontWeight="SemiBold"
+                                                           FontSize="14"
+                                                           FontWeight="Normal"
                                                            Foreground="#374151"/>
                                                 <Border Style="{StaticResource RoomStatusPillByCodeStyle}"
                                                         Tag="{Binding NewStatus}">
                                                     <TextBlock Text="{Binding NewStatusSpanish}"
-                                                               Foreground="#ffffff"
-                                                               Padding="10,4"
-                                                               VerticalAlignment="Center"
-                                                               HorizontalAlignment="Center"
-                                                               FontSize="13"/>
+                                                               Style="{StaticResource RoomStatusPillTextStyle}"/>
                                                 </Border>
                                             </StackPanel>
                                         </DataTemplate>

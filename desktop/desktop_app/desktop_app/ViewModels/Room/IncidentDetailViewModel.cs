@@ -86,19 +86,21 @@ namespace desktop_app.ViewModels.Room
             ResolveCommand = new AsyncRelayCommand(ResolveAsync);
             AssignCommand = new AsyncRelayCommand(AssignAsync);
             AddNoteCommand = new AsyncRelayCommand(AddNoteAsync);
-            BackCommand = new RelayCommand(_ =>
-            {
-                if (_onBack != null)
-                {
-                    _onBack.Invoke();
-                    return;
-                }
-
-                NavigationService.Instance.NavigateTo<RoomView>();
-                RefreshRoomViewAfterReturn();
-            });
+            BackCommand = new RelayCommand(_ => NavigateBack());
 
             _ = LoadAsync();
+        }
+
+        private void NavigateBack()
+        {
+            if (_onBack != null)
+            {
+                _onBack.Invoke();
+                return;
+            }
+
+            NavigationService.Instance.NavigateTo<RoomView>();
+            RefreshRoomViewAfterReturn();
         }
 
         private static void RefreshRoomViewAfterReturn()
@@ -258,8 +260,9 @@ namespace desktop_app.ViewModels.Room
                 MessageBox.Show("No se pudo resolver incidencia (API).");
                 return;
             }
-            await LoadAsync();
+
             _onResolved?.Invoke();
+            NavigateBack();
         }
 
         private async Task AssignAsync()

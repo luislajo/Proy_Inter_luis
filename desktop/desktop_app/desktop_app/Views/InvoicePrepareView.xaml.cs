@@ -11,17 +11,15 @@ namespace desktop_app.Views
             InitializeComponent();
         }
 
-        /// <summary>
-        /// Ajusta el ancho de la columna «Concepto» como en el resto de listas de la aplicación.
-        /// </summary>
-        private void ExtrasList_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void BilledRowsList_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (sender is not ListView listView || listView.View is not GridView gridView || gridView.Columns.Count < 3)
+            if (sender is not ListView listView || listView.View is not GridView gridView || gridView.Columns.Count < 4)
                 return;
 
-            const double fixedCols = 72 + 88 + 24;
-            double available = listView.ActualWidth - fixedCols - 28;
-            gridView.Columns[0].Width = Math.Max(160, available);
+            const double fixedCols = 56 + 80 + 88 + 28;
+            double available = listView.ActualWidth - fixedCols;
+            if (available > 140)
+                gridView.Columns[0].Width = available;
         }
     }
 }

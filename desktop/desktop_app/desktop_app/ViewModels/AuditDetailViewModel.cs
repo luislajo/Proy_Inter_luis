@@ -47,7 +47,7 @@ namespace desktop_app.ViewModels
             var changed = Fields.Count(r => r.IsChanged);
             SummaryText = Fields.Count == 0
                 ? "Sin campos que mostrar"
-                : $"{Fields.Count} campo(s) · {changed} modificado(s)";
+                : $"{Fields.Count} campos · {changed} modificados";
 
             HasFields = Fields.Count > 0;
             EmptyMessage = "Este registro no incluye datos de estado para mostrar.";

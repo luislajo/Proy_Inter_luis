@@ -46,9 +46,54 @@ namespace desktop_app.ViewModels
                 _booking = value;
                 OnPropertyChanged();
                 RefreshAll();
+                RefreshStayUi();
+                _ = LoadBookingStayStateAsync();
             }
         }
 
+        private bool _showCheckInPanel;
+        public bool ShowCheckInPanel
+        {
+            get => _showCheckInPanel;
+            private set => SetProperty(ref _showCheckInPanel, value);
+        }
+
+        private bool _canRegisterCheckIn;
+        public bool CanRegisterCheckIn
+        {
+            get => _canRegisterCheckIn;
+            private set => SetProperty(ref _canRegisterCheckIn, value);
+        }
+
+        private string _checkInStatusText = "";
+        public string CheckInStatusText
+        {
+            get => _checkInStatusText;
+            private set => SetProperty(ref _checkInStatusText, value);
+        }
+
+        public string? DisplayCheckInCode => Booking.CheckInCode;
+
+        private bool _showCheckOutPanel;
+        public bool ShowCheckOutPanel
+        {
+            get => _showCheckOutPanel;
+            private set => SetProperty(ref _showCheckOutPanel, value);
+        }
+
+        private bool _canRegisterCheckOut;
+        public bool CanRegisterCheckOut
+        {
+            get => _canRegisterCheckOut;
+            private set => SetProperty(ref _canRegisterCheckOut, value);
+        }
+
+        private string _checkOutStatusText = "";
+        public string CheckOutStatusText
+        {
+            get => _checkOutStatusText;
+            private set => SetProperty(ref _checkOutStatusText, value);
+        }
 
         private ObservableCollection<UserModel> _clients = new();
         /// <summary>
@@ -233,6 +278,10 @@ namespace desktop_app.ViewModels
         /// </summary>
         public ICommand DownloadInvoiceCommand { get; }
 
+        public ICommand RegisterCheckInCommand { get; }
+
+        public ICommand RegisterCheckOutCommand { get; }
+
 
         public ICommand ReturnCommand { get; } =
             new RelayCommand(_ =>
@@ -249,9 +298,209 @@ namespace desktop_app.ViewModels
             SaveCommand = new RelayCommand(async _ => await Save());
             CancelCommand = new RelayCommand(async _ => await Cancel());
             DownloadInvoiceCommand = new RelayCommand(_ => NavigateToInvoicePrepare());
+            RegisterCheckInCommand = new RelayCommand(async _ => await RegisterCheckInAsync(), _ => CanRegisterCheckIn);
+            RegisterCheckOutCommand = new RelayCommand(async _ => await RegisterCheckOutAsync(), _ => CanRegisterCheckOut);
 
             LoadClients();
             LoadRooms();
+        }
+
+        private async Task LoadBookingStayStateAsync()
+        {
+            if (string.IsNullOrEmpty(Booking.Id))
+            {
+                RefreshStayUi();
+                return;
+            }
+
+            try
+            {
+                var fresh = await BookingService.GetBookingByIdAsync(Booking.Id);
+                if (fresh == null) return;
+
+                var roomNumber = Booking.RoomNumber;
+                var clientName = Booking.ClientName;
+                var clientDni = Booking.ClientDni;
+
+                Booking.CheckInCode = fresh.CheckInCode;
+                Booking.CheckedIn = fresh.CheckedIn;
+                Booking.CanSubmitCheckIn = fresh.CanSubmitCheckIn;
+                Booking.CheckInCodeSent = fresh.CheckInCodeSent;
+                Booking.CheckedOut = fresh.CheckedOut;
+                Booking.CanSubmitCheckOut = fresh.CanSubmitCheckOut;
+                Booking.Status = fresh.Status;
+                Booking.IsCheckInDayToday = fresh.IsCheckInDayToday;
+                Booking.IsCheckOutDayToday = fresh.IsCheckOutDayToday;
+                Booking.StayWindowOpen = fresh.StayWindowOpen;
+                Booking.CheckInDate = fresh.CheckInDate;
+                Booking.CheckOutDate = fresh.CheckOutDate;
+
+                Booking.RoomNumber = roomNumber;
+                Booking.ClientName = clientName;
+                Booking.ClientDni = clientDni;
+
+                RefreshStayUi();
+                OnPropertyChanged(nameof(DisplayCheckInCode));
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message.Contains("401") || ex.Message.Contains("Token", StringComparison.OrdinalIgnoreCase)
+                    ? "Sesión expirada. Cierra sesión y vuelve a entrar."
+                    : ex.Message;
+                CheckInStatusText = msg;
+                CheckOutStatusText = msg;
+                CanRegisterCheckIn = false;
+                CanRegisterCheckOut = false;
+            }
+        }
+
+        private void RefreshStayUi()
+        {
+            RefreshCheckInUi();
+            RefreshCheckOutUi();
+        }
+
+        private void RefreshCheckOutUi()
+        {
+            var existing = !string.IsNullOrEmpty(Booking.Id);
+            var open = Booking.Status == "Abierta";
+            ShowCheckOutPanel = existing && open && Booking.IsCheckOutDayToday;
+
+            if (!ShowCheckOutPanel)
+            {
+                CheckOutStatusText = "";
+                CanRegisterCheckOut = false;
+                return;
+            }
+
+            if (Booking.CheckedOut)
+            {
+                CheckOutStatusText = "Check-out completado.";
+                CanRegisterCheckOut = false;
+                return;
+            }
+
+            if (!Booking.CheckedIn)
+            {
+                CheckOutStatusText = "El huésped debe hacer check-in antes del check-out.";
+                CanRegisterCheckOut = false;
+                return;
+            }
+
+            if (Booking.CanSubmitCheckOut)
+            {
+                CheckOutStatusText = "Puedes registrar la salida del huésped (check-out).";
+                CanRegisterCheckOut = true;
+                return;
+            }
+
+            if (!Booking.StayWindowOpen)
+            {
+                CheckOutStatusText = "Disponible a partir de las 11:00 (hora del hotel).";
+                CanRegisterCheckOut = false;
+                return;
+            }
+
+            CheckOutStatusText = "Check-out disponible hoy tras las 11:00.";
+            CanRegisterCheckOut = false;
+        }
+
+        private async Task RegisterCheckOutAsync()
+        {
+            if (string.IsNullOrEmpty(Booking.Id)) return;
+
+            try
+            {
+                var updated = await BookingService.VerifyCheckOutAsync(Booking.Id);
+                if (updated == null)
+                {
+                    MessageBox.Show("No se pudo registrar el check-out.", "Check-out", MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                Booking.CheckedOut = updated.CheckedOut;
+                Booking.CanSubmitCheckOut = updated.CanSubmitCheckOut;
+                Booking.Status = updated.Status;
+                await LoadBookingStayStateAsync();
+
+                MessageBox.Show("Check-out registrado correctamente.", "Check-out", MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Check-out", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void RefreshCheckInUi()
+        {
+            var existing = !string.IsNullOrEmpty(Booking.Id);
+            var open = Booking.Status == "Abierta";
+            ShowCheckInPanel = existing && open && Booking.IsCheckInDayToday;
+
+            if (!ShowCheckInPanel)
+            {
+                CheckInStatusText = "";
+                CanRegisterCheckIn = false;
+                return;
+            }
+
+            if (Booking.CheckedIn)
+            {
+                CheckInStatusText = "Check-in completado.";
+                CanRegisterCheckIn = false;
+                return;
+            }
+
+            if (Booking.CanSubmitCheckIn)
+            {
+                CheckInStatusText = string.IsNullOrEmpty(Booking.CheckInCode)
+                    ? "Puedes registrar el check-in del huésped."
+                    : $"Código: {Booking.CheckInCode} — pulsa Registrar check-in.";
+                CanRegisterCheckIn = true;
+                return;
+            }
+
+            if (!Booking.StayWindowOpen)
+            {
+                CheckInStatusText = "Disponible a partir de las 11:00 (hora del hotel).";
+                CanRegisterCheckIn = false;
+                return;
+            }
+
+            CheckInStatusText = "Esperando código de check-in para este día de entrada.";
+            CanRegisterCheckIn = false;
+        }
+
+        private async Task RegisterCheckInAsync()
+        {
+            if (string.IsNullOrEmpty(Booking.Id)) return;
+
+            try
+            {
+                var updated = await BookingService.VerifyCheckInAsync(Booking.Id, Booking.CheckInCode);
+                if (updated == null)
+                {
+                    MessageBox.Show("No se pudo registrar el check-in.", "Check-in", MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                Booking.CheckedIn = updated.CheckedIn;
+                Booking.CanSubmitCheckIn = updated.CanSubmitCheckIn;
+                Booking.CheckInCode = updated.CheckInCode;
+                Booking.Status = updated.Status;
+                await LoadBookingStayStateAsync();
+                OnPropertyChanged(nameof(DisplayCheckInCode));
+
+                MessageBox.Show("Check-in registrado correctamente.", "Check-in", MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Check-in", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         /// <summary>
@@ -294,6 +543,8 @@ namespace desktop_app.ViewModels
             OnPropertyChanged(nameof(Offer));
             OnPropertyChanged(nameof(TotalPrice));
             OnPropertyChanged(nameof(TotalNights));
+            OnPropertyChanged(nameof(DisplayCheckInCode));
+            RefreshStayUi();
         }
 
         /// <summary>

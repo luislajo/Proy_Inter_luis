@@ -139,6 +139,10 @@ export async function getAuditLogByUserId(req, res) {
         if (!id) return res.status(400).json({ error: 'Se requiere ID del usuario' });
         if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'No es un ID válido' });
 
+        if (req.user?.rol === "Usuario" && String(req.user.id) !== String(id)) {
+            return res.status(403).json({ error: "No autorizado para ver el historial de otro usuario" });
+        }
+
         // 1. Obtener todas las reservas del usuario
         const userBookings = await bookingDatabaseModel.find({ client: id }).select('_id').lean();
         const bookingIds = userBookings.map(b => b._id);

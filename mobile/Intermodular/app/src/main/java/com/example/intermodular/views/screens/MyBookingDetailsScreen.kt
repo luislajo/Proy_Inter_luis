@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
@@ -43,6 +44,9 @@ import com.example.intermodular.views.components.BookingDataForm
 import androidx.compose.runtime.LaunchedEffect
 import com.example.intermodular.views.navigation.Routes
 import java.time.LocalDate
+
+private val CheckInSuccessBackground = Color(0xFFC8E6C9)
+private val CheckInSuccessText = Color(0xFF1B5E20)
 
 /**
  * Pantalla de detalles y actualización de una reserva
@@ -78,6 +82,11 @@ import java.time.LocalDate
  * @param onRatingChange - Callback al modificar la calificación de la reseña
  * @param canReportIncident - True si hoy estás dentro del periodo de la reserva (para avisar incidencias)
  * @param onOpenReportIncident - Abre la pantalla completa para escribir una incidencia
+ * @param checkInSubmitting - Carga mientras se valida el check-in
+ * @param onSubmitCheckIn - Callback para confirmar el check-in
+ * @param checkOutSubmitting - Carga mientras se valida el check-out
+ * @param onSubmitCheckOut - Callback para confirmar el check-out
+ * @param stayActionMessage - Aviso tras check-in/check-out (p. ej. visible en historial)
  */
 @Composable
 fun MyBookingDetailsScreen(
@@ -104,7 +113,12 @@ fun MyBookingDetailsScreen(
     canReportIncident: Boolean = false,
     onOpenReportIncident: () -> Unit = {},
     invoiceOpening: Boolean = false,
-    onOpenInvoice: () -> Unit = {}
+    onOpenInvoice: () -> Unit = {},
+    checkInSubmitting: Boolean = false,
+    onSubmitCheckIn: () -> Unit = {},
+    checkOutSubmitting: Boolean = false,
+    onSubmitCheckOut: () -> Unit = {},
+    stayActionMessage: String? = null
 ) {
     LaunchedEffect(navigateToPayment) {
         navigateToPayment?.let {
@@ -136,6 +150,22 @@ fun MyBookingDetailsScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
+                    }
+
+                    stayActionMessage?.let { msg ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp)
+                                .background(CheckInSuccessBackground, MaterialTheme.shapes.medium)
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = msg,
+                                color = CheckInSuccessText,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
 
                     // Construcción url
@@ -179,33 +209,173 @@ fun MyBookingDetailsScreen(
                         color = MaterialTheme.colorScheme.secondary
                     )
 
-                    // Estado operativo de la habitación en el hotel (no es un paso que debas pulsar en la app)
-                    room?.status?.let { rs ->
+                    if (booking?.status == "Abierta" && booking.isCheckInDayToday) {
                         Spacer(modifier = Modifier.height(10.dp))
-                        val ready = rs == "available"
-                        val bg = if (ready) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceVariant
-                        val fg = if (ready) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(bg, shape = MaterialTheme.shapes.medium)
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Text(
-                                text = if (ready) {
-                                    "Habitación lista para tu llegada"
-                                } else {
-                                    "Habitación aún en preparación"
-                                },
-                                color = fg,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
+                        when {
+                            booking.checkedIn -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            CheckInSuccessBackground,
+                                            shape = MaterialTheme.shapes.medium
+                                        )
+                                        .padding(14.dp)
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Check-in completado · Habitación nº${room?.roomNumber}",
+                                            color = CheckInSuccessText,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = "Tu llegada queda registrada. El hotel actualiza el estado de la habitación y puedes usar los servicios de tu estancia.",
+                                            color = CheckInSuccessText.copy(alpha = 0.9f),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            }
+                            !booking.checkInCode.isNullOrBlank() -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            MaterialTheme.colorScheme.primaryContainer,
+                                            shape = MaterialTheme.shapes.medium
+                                        )
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "Habitación nº${room?.roomNumber}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Código check-in",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        Text(
+                                            text = booking.checkInCode,
+                                            style = MaterialTheme.typography.headlineLarge,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                                if (booking.canSubmitCheckIn) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Button(
+                                        onClick = onSubmitCheckIn,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = !checkInSubmitting
+                                    ) {
+                                        if (checkInSubmitting) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.height(20.dp),
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                strokeWidth = 2.dp
+                                            )
+                                        } else {
+                                            Text("Confirmar check-in")
+                                        }
+                                    }
+                                }
+                            }
+                            else -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                            shape = MaterialTheme.shapes.medium
+                                        )
+                                        .padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = "El código de check-in estará disponible aquí a partir de las 11:00",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    if (booking?.status == "Abierta" && booking.isCheckOutDayToday) {
+                        when {
+                            booking.checkedOut -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            CheckInSuccessBackground,
+                                            MaterialTheme.shapes.medium
+                                        )
+                                        .padding(14.dp)
+                                ) {
+                                    Text(
+                                        text = "Check-out completado · Habitación nº${room?.roomNumber}",
+                                        color = CheckInSuccessText,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                            booking.canSubmitCheckOut -> {
+                                Text(
+                                    text = "Check-out",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Confirma tu salida del hotel:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(
+                                    onClick = onSubmitCheckOut,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !checkOutSubmitting
+                                ) {
+                                    if (checkOutSubmitting) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.height(20.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Text("Confirmar check-out")
+                                    }
+                                }
+                            }
+                            booking.checkedIn -> {
+                                Text(
+                                    text = "El check-out estará disponible a partir de las 11:00 del día de salida.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            else -> {
+                                Text(
+                                    text = "Debes hacer check-in antes de poder registrar el check-out.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
 
                     // FORMULARIO DE EDICIÓN DE RESERVA
                     BookingDataForm(
@@ -397,6 +567,9 @@ fun MyBookingDetailsState(
     val reviewCreated by viewModel.reviewCreated.collectAsStateWithLifecycle()
     val navigateToPayment by viewModel.navigateToPayment.collectAsStateWithLifecycle()
     val invoiceOpening by viewModel.invoiceOpening.collectAsStateWithLifecycle()
+    val checkInSubmitting by viewModel.checkInSubmitting.collectAsStateWithLifecycle()
+    val checkOutSubmitting by viewModel.checkOutSubmitting.collectAsStateWithLifecycle()
+    val stayActionMessage by viewModel.stayActionMessage.collectAsStateWithLifecycle()
 
     val today = LocalDate.now()
     val canReportIncident = booking?.let { b ->
@@ -436,6 +609,11 @@ fun MyBookingDetailsState(
             }
         },
         invoiceOpening = invoiceOpening,
-        onOpenInvoice = { viewModel.openInvoicePdf(context) }
+        onOpenInvoice = { viewModel.openInvoicePdf(context) },
+        checkInSubmitting = checkInSubmitting,
+        onSubmitCheckIn = viewModel::submitCheckIn,
+        checkOutSubmitting = checkOutSubmitting,
+        onSubmitCheckOut = viewModel::submitCheckOut,
+        stayActionMessage = stayActionMessage
     )
 }

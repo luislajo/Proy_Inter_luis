@@ -3,8 +3,14 @@ import { roomDatabaseModel } from "../models/roomsModel.js"
 import mongoose from "mongoose";
 import { finalizeBookingDocumentIfPast, finalizePastBookings } from "../jobs/finalizePastBookings.js";
 import { syncRoomOccupancyFromBookings } from "../jobs/roomOccupancySync.js";
+import {
+    CHECKIN_CODE_LENGTH,
+    isCheckInCodeSendWindowOpen,
+    isCheckInDayToday,
+    isCheckOutDayToday
+} from "../lib/checkInCode.js";
+import { ensureCheckInCodeForBooking } from "../lib/bookingStay.js";
 import { userDatabaseModel } from "../models/usersModel.js";
-import { sendEmail } from "../lib/mail/mailing.js";
 import { auditLogModel } from "../models/auditLogModel.js";
 import puppeteer from "puppeteer";
 import fs from "fs";
@@ -68,6 +74,69 @@ function escapeHtml(s) {
  * @param {Record<string, unknown>|null|undefined} body
  * @returns {{ name: string, quantity: number, unitPrice: number, total: number }[]}
  */
+const DEFAULT_EXTRA_UNIT_PRICE = 15;
+
+/**
+ * @param {{ total?: number, quantity?: number, unitPrice?: number }} extra
+ * @returns {number}
+ */
+function extraLineTotal(extra) {
+    if (extra?.total != null && !Number.isNaN(Number(extra.total))) {
+        return toMoney(extra.total);
+    }
+    const qty = Math.max(1, Number(extra?.quantity ?? 1));
+    const unit = Math.max(0, Number(extra?.unitPrice ?? 0));
+    return toMoney(qty * unit);
+}
+
+/**
+ * @param {{ name: string, quantity: number, unitPrice: number, total: number }[]} extras
+ * @returns {number}
+ */
+function sumExtrasSubtotal(extras) {
+    return toMoney((extras || []).reduce((acc, extra) => acc + extraLineTotal(extra), 0));
+}
+
+/**
+ * Extras facturables por defecto según la habitación (wifi, cama extra, cuna, etc.).
+ * @param {object|null|undefined} room
+ * @returns {{ name: string, quantity: number, unitPrice: number, total: number }[]}
+ */
+function mapExtrasFromRoom(room) {
+    if (!room) return [];
+    const out = [];
+    if (Array.isArray(room.extras)) {
+        for (const name of room.extras) {
+            const n = String(name || "").trim();
+            if (n) {
+                out.push({
+                    name: n,
+                    quantity: 1,
+                    unitPrice: DEFAULT_EXTRA_UNIT_PRICE,
+                    total: DEFAULT_EXTRA_UNIT_PRICE
+                });
+            }
+        }
+    }
+    if (room.extraBed) {
+        out.push({
+            name: "Cama extra",
+            quantity: 1,
+            unitPrice: DEFAULT_EXTRA_UNIT_PRICE,
+            total: DEFAULT_EXTRA_UNIT_PRICE
+        });
+    }
+    if (room.crib) {
+        out.push({
+            name: "Cuna",
+            quantity: 1,
+            unitPrice: DEFAULT_EXTRA_UNIT_PRICE,
+            total: DEFAULT_EXTRA_UNIT_PRICE
+        });
+    }
+    return out;
+}
+
 function mapExtrasFromRequestBody(body) {
     const extrasInput = Array.isArray(body?.extras) ? body.extras : [];
     return extrasInput
@@ -78,6 +147,75 @@ function mapExtrasFromRequestBody(body) {
         }))
         .filter((extra) => extra.name.length > 0)
         .map((extra) => ({ ...extra, total: toMoney(extra.quantity * extra.unitPrice) }));
+}
+
+/**
+ * Líneas extra para factura: guardadas en BD o, si faltan, las de la habitación.
+ * @param {object} breakdown
+ * @param {object|null|undefined} room
+ * @returns {{ name: string, quantity: number, unitPrice: number, total: number }[]}
+ */
+function resolveInvoiceExtras(breakdown, room) {
+    let extras = Array.isArray(breakdown?.extras) ? breakdown.extras : [];
+    if (extras.length === 0) extras = mapExtrasFromRoom(room);
+    return extras
+        .map((extra) => ({
+            name: String(extra?.name || "").trim(),
+            quantity: Math.max(1, Number(extra?.quantity ?? 1)),
+            unitPrice: toMoney(extra?.unitPrice ?? 0),
+            total: extraLineTotal(extra)
+        }))
+        .filter((extra) => extra.name.length > 0);
+}
+
+/**
+ * Totales de pie de factura coherentes con las líneas mostradas (noches + extras + IVA).
+ * @param {object} booking
+ * @param {object} breakdown
+ * @param {{ name: string, quantity: number, unitPrice: number, total: number }[]} extras
+ * @param {object|null|undefined} room
+ */
+function resolveInvoiceTotals(booking, breakdown, extras, room) {
+    const extrasSubtotal = sumExtrasSubtotal(extras);
+    const offerPercent = Math.min(
+        100,
+        Math.max(0, Number(breakdown?.offerPercent ?? room?.offer ?? booking.offer ?? 0))
+    );
+    const listPricePerNight =
+        room?.pricePerNight != null
+            ? toMoney(room.pricePerNight)
+            : offerPercent > 0 && offerPercent < 100
+              ? toMoney(toMoney(booking.pricePerNight) / (1 - offerPercent / 100))
+              : toMoney(booking.pricePerNight);
+    const nightsListSubtotal =
+        breakdown?.nightsListSubtotal != null
+            ? toMoney(breakdown.nightsListSubtotal)
+            : toMoney(booking.totalNights * listPricePerNight);
+    const nightsSubtotal =
+        breakdown?.nightsSubtotal != null
+            ? toMoney(breakdown.nightsSubtotal)
+            : toMoney(booking.totalNights * toMoney(booking.pricePerNight));
+    const discountAmount =
+        breakdown?.discountAmount != null
+            ? toMoney(breakdown.discountAmount)
+            : offerPercent > 0
+              ? toMoney(Math.max(0, nightsListSubtotal - nightsSubtotal))
+              : 0;
+    const taxRate = Number(breakdown?.taxRate ?? DEFAULT_TAX_RATE);
+    const taxableBase = Math.max(0, nightsSubtotal + extrasSubtotal);
+    const taxAmount = toMoney(taxableBase * (taxRate / 100));
+    const total = toMoney(taxableBase + taxAmount);
+    return {
+        nightsSubtotal,
+        nightsListSubtotal,
+        offerPercent,
+        extrasSubtotal,
+        discountAmount,
+        taxRate,
+        taxableBase,
+        taxAmount,
+        total
+    };
 }
 
 /**
@@ -129,23 +267,17 @@ function applyInvoiceMath(booking, mappedExtras, body, room) {
 }
 
 /**
- * Genera filas HTML de subtotal de noches; si hay descuento respecto al catálogo, muestra desglose.
- * @param {object} breakdown - Objeto tipo `invoiceBreakdown` (subtotales y porcentaje oferta).
- * @returns {string} Fragmento HTML (`<tr>...</tr>`).
+ * Pie de totales estándar (base imponible + IVA + total factura).
+ * @param {{ taxableBase: number, taxRate: number, taxAmount: number, total: number }} totals
+ * @returns {string}
  */
-function renderInvoiceNightsSubtotalRows(breakdown) {
-    const disc = toMoney(breakdown.discountAmount);
-    const offerP = toMoney(breakdown.offerPercent ?? 0);
-    const listN =
-        breakdown.nightsListSubtotal != null ? toMoney(breakdown.nightsListSubtotal) : null;
-    const ns = toMoney(breakdown.nightsSubtotal);
-    if (disc > 0.005 && listN != null && listN > ns + 0.005) {
-        return `
-          <tr><td>Precio catálogo (noches):</td><td>${listN.toFixed(2)} EUR</td></tr>
-          <tr><td>Descuento habitación (${offerP.toFixed(0)} %):</td><td>- ${disc.toFixed(2)} EUR</td></tr>
-          <tr><td>Subtotal noches:</td><td>${ns.toFixed(2)} EUR</td></tr>`;
-    }
-    return `<tr><td>Subtotal noches:</td><td>${ns.toFixed(2)} EUR</td></tr>`;
+function renderInvoiceSummaryRows(totals) {
+    const base = toMoney(totals.taxableBase);
+    const rate = toMoney(totals.taxRate);
+    return `
+          <tr><td>Base imponible</td><td>${base.toFixed(2)} EUR</td></tr>
+          <tr><td>IVA (${rate.toFixed(0)} %)</td><td>${totals.taxAmount.toFixed(2)} EUR</td></tr>
+          <tr class="total"><td>Total factura</td><td>${totals.total.toFixed(2)} EUR</td></tr>`;
 }
 
 /**
@@ -194,17 +326,38 @@ function invoiceLogoImgHtml() {
  */
 function buildInvoiceHtml({ booking, client, room }) {
     const breakdown = booking.invoiceBreakdown ?? {};
-    const extras = Array.isArray(breakdown.extras) ? breakdown.extras : [];
+    const extras = resolveInvoiceExtras(breakdown, room);
+    const totals = resolveInvoiceTotals(booking, breakdown, extras, room);
+    const issuer = booking.invoiceIssuer ?? {
+        name: HOTEL_NAME,
+        taxId: HOTEL_TAX_ID,
+        address: HOTEL_ADDRESS
+    };
+    const nightsSubtotal = toMoney(breakdown.nightsSubtotal ?? booking.totalNights * booking.pricePerNight);
+    const roomLabel = room?.roomNumber ? `habitación ${room.roomNumber}` : "habitación";
+    const discountNote =
+        totals.offerPercent > 0.005 && totals.discountAmount > 0.005
+            ? `<br/><span style="font-size:11px;color:#444">Tarifa con descuento (${totals.offerPercent.toFixed(0)} %)</span>`
+            : "";
+    const stayRow = `
+            <tr>
+              <td>Alojamiento — ${escapeHtml(roomLabel)} (${booking.totalNights} noches)<br/>
+                  <span style="font-size:11px;color:#444">${formatDate(booking.checkInDate)} – ${formatDate(booking.checkOutDate)}</span>${discountNote}</td>
+              <td>${booking.totalNights}</td>
+              <td>${toMoney(booking.pricePerNight).toFixed(2)} EUR</td>
+              <td>${nightsSubtotal.toFixed(2)} EUR</td>
+            </tr>`;
     const extrasRows = extras.length > 0
         ? extras.map((extra) => `
             <tr>
-              <td>${extra.name}</td>
+              <td>${escapeHtml(extra.name)}</td>
               <td>${extra.quantity}</td>
               <td>${toMoney(extra.unitPrice).toFixed(2)} EUR</td>
               <td>${toMoney(extra.total).toFixed(2)} EUR</td>
             </tr>
           `).join("")
-        : `<tr><td colspan="4">Sin extras</td></tr>`;
+        : "";
+    const billedBody = extrasRows ? stayRow + extrasRows : stayRow;
 
     const logoBlock = invoiceLogoImgHtml();
 
@@ -215,6 +368,8 @@ function buildInvoiceHtml({ booking, client, room }) {
         <style>
           body { font-family: Arial, sans-serif; color: #000; font-size: 12px; margin: 24px; line-height: 1.35; }
           .section { margin-bottom: 14px; }
+          .parties { display: flex; gap: 24px; margin-bottom: 14px; }
+          .party { flex: 1; }
           .section-title { font-weight: bold; margin: 0 0 6px 0; }
           p { margin: 2px 0; }
           .title-row { margin-bottom: 12px; }
@@ -235,31 +390,26 @@ function buildInvoiceHtml({ booking, client, room }) {
           <p>Fecha: ${formatDate(booking.invoiceDate || booking.payDate || new Date())}</p>
         </div>
 
-        <div class="section">
+        <div class="parties">
+        <div class="party">
           <p class="section-title">Emisor</p>
-          <p>${escapeHtml(HOTEL_NAME)}</p>
-          <p>NIF: ${escapeHtml(HOTEL_TAX_ID)}</p>
-          <p>${escapeHtml(HOTEL_ADDRESS)}</p>
+          <p>${escapeHtml(issuer.name || HOTEL_NAME)}</p>
+          <p>NIF: ${escapeHtml(issuer.taxId || HOTEL_TAX_ID)}</p>
+          <p>${escapeHtml(issuer.address || HOTEL_ADDRESS)}</p>
         </div>
 
-        <div class="section">
+        <div class="party">
           <p class="section-title">Cliente</p>
-          <p>${client?.firstName || ""} ${client?.lastName || ""}</p>
-          <p>Email: ${client?.email || "-"} · DNI: ${client?.dni || "-"}</p>
-          <p>Ciudad fiscal: ${client?.cityName || "-"}</p>
+          <p>${escapeHtml(`${client?.firstName || ""} ${client?.lastName || ""}`.trim())}</p>
+          <p>Email: ${escapeHtml(client?.email || "-")} · DNI: ${escapeHtml(client?.dni || "-")}</p>
+          <p>Ciudad: ${escapeHtml(client?.cityName || "-")}</p>
+        </div>
         </div>
 
         ${renderCompanySection(booking.invoiceCompany)}
 
         <div class="section">
-          <p class="section-title">Estancia</p>
-          <p>Habitación ${room?.roomNumber || "-"} (${room?.type || "-"})</p>
-          <p>Extras habitación: ${Array.isArray(room?.extras) && room.extras.length ? escapeHtml(room.extras.join(", ")) : "—"}</p>
-          <p>${formatDate(booking.checkInDate)} – ${formatDate(booking.checkOutDate)} · ${booking.totalNights} noches · ${toMoney(booking.pricePerNight).toFixed(2)} EUR/noche</p>
-        </div>
-
-        <div class="section">
-          <p class="section-title">Extras facturados</p>
+          <p class="section-title">Conceptos facturados</p>
           <table class="extras">
             <thead>
               <tr>
@@ -270,16 +420,13 @@ function buildInvoiceHtml({ booking, client, room }) {
               </tr>
             </thead>
             <tbody>
-              ${extrasRows}
+              ${billedBody}
             </tbody>
           </table>
         </div>
 
         <table class="totals">
-          ${renderInvoiceNightsSubtotalRows(breakdown)}
-          <tr><td>Subtotal extras:</td><td>${toMoney(breakdown.extrasSubtotal).toFixed(2)} EUR</td></tr>
-          <tr><td>IVA (${toMoney(breakdown.taxRate).toFixed(2)} %):</td><td>${toMoney(breakdown.taxAmount).toFixed(2)} EUR</td></tr>
-          <tr class="total"><td>Total:</td><td>${toMoney(breakdown.total).toFixed(2)} EUR</td></tr>
+          ${renderInvoiceSummaryRows(totals)}
         </table>
       </body>
     </html>`;
@@ -333,11 +480,14 @@ export async function getOneBookingById(req, res) {
         if (!id) return res.status(400).json({ error: 'Se requiere ID de la reserva' });
         if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'No es un ID' })
 
-        const booking = await bookingDatabaseModel.findById(id);
+        let booking = await bookingDatabaseModel.findById(id);
         if (!booking) return res.status(404).json({ error: 'Reserva no encontrada' });
 
+        await ensureCheckInCodeForBooking(booking);
+        booking = await bookingDatabaseModel.findById(id);
+
         const updated = await finalizeBookingDocumentIfPast(booking);
-        return res.status(200).json(updated);
+        return res.status(200).json(withBookingStayMeta(updated));
     }
     catch (error) {
         console.error('Error al obtener la reserva:', error);
@@ -410,7 +560,7 @@ export async function getBookingsByClientId(req, res) {
         const bookings = await bookingDatabaseModel.find({ client: id });
         if (!bookings) return res.status(404).json({ error: 'No se encontraron reservas para el cliente' });
 
-        return res.status(200).json(bookings);
+        return res.status(200).json(bookings.map((b) => withBookingStayMeta(b)));
     }
     catch (error) {
         console.error('Error al obtener las reservas del cliente:', error);
@@ -508,8 +658,6 @@ export async function createBooking(req, res) {
         syncRoomOccupancyFromBookings().catch((err) =>
             console.error("[rooms] Error sync ocupación tras crear reserva:", err)
         );
-        // @ts-ignore - poblar es un método definido en el schema
-        const populated = await bdBooking.poblar()
 
         // Registro de auditoría para la creación
         auditLogModel.create({
@@ -523,8 +671,6 @@ export async function createBooking(req, res) {
             timestamp: new Date()
         }).catch(err => console.error('Error al crear audit log:', err));
 
-        
-        sendEmail(user.email, "Reserva confirmada", "newBooking", populated)
         return res.status(201).json(bdBooking)
     }
     catch (error) {
@@ -569,11 +715,6 @@ export async function cancelBooking(req, res) {
         syncRoomOccupancyFromBookings().catch((err) =>
             console.error("[rooms] Error sync ocupación tras cancelar reserva:", err)
         );
-
-        // @ts-ignore - poblar es un método definido en el schema
-        const populated = await bookingUpdated.poblar();
-        const user = await userDatabaseModel.findById(bookingUpdated.client);
-        sendEmail(user.email, "Reserva cancelada", "cancelBooking", populated)
 
         return res.status(200).json(bookingUpdated);
     }
@@ -650,6 +791,235 @@ export async function updateBooking(req, res) {
 
 
 /**
+ * Añade flags y el código de check-in al JSON cuando corresponde (solo en app del cliente).
+ * @param {object} bookingDoc
+ * @returns {object}
+ */
+function withBookingStayMeta(bookingDoc) {
+    const json = typeof bookingDoc?.toJSON === "function" ? bookingDoc.toJSON() : { ...bookingDoc };
+    const checkInToday = isCheckInDayToday(json);
+    const checkOutToday = isCheckOutDayToday(json);
+    const windowOpen = isCheckInCodeSendWindowOpen();
+    const codeReady =
+        json.status === "Abierta" &&
+        !json.checkedInAt &&
+        Boolean(json.checkInCodeSentAt) &&
+        checkInToday &&
+        windowOpen;
+    const codeValue = bookingDoc?.checkInCode ?? null;
+    const staffMaySeeCode =
+        json.status === "Abierta" &&
+        !json.checkedInAt &&
+        Boolean(json.checkInCodeSentAt) &&
+        checkInToday &&
+        Boolean(codeValue);
+    const canSubmitCheckOut =
+        json.status === "Abierta" &&
+        Boolean(json.checkedInAt) &&
+        !json.checkedOutAt &&
+        checkOutToday &&
+        windowOpen;
+    const staffCanCheckIn =
+        json.status === "Abierta" &&
+        !json.checkedInAt &&
+        checkInToday &&
+        windowOpen &&
+        Boolean(codeValue || bookingDoc?.checkInCode);
+    const staffCanCheckOut =
+        json.status === "Abierta" &&
+        Boolean(json.checkedInAt) &&
+        !json.checkedOutAt &&
+        checkOutToday &&
+        windowOpen;
+
+    return {
+        ...json,
+        isCheckInDayToday: checkInToday,
+        isCheckOutDayToday: checkOutToday,
+        stayWindowOpen: windowOpen,
+        checkInCode: (codeReady || staffMaySeeCode) && codeValue ? codeValue : null,
+        checkInCodeSent: Boolean(json.checkInCodeSentAt),
+        checkedIn: Boolean(json.checkedInAt),
+        canSubmitCheckIn: (codeReady && Boolean(codeValue)) || staffCanCheckIn,
+        checkedOut: Boolean(json.checkedOutAt),
+        canSubmitCheckOut: canSubmitCheckOut || staffCanCheckOut
+    };
+}
+
+/**
+ * Valida el código de 5 dígitos y registra el check-in.
+ *
+ * @async
+ * @function verifyBookingCheckIn
+ */
+export async function verifyBookingCheckIn(req, res) {
+    try {
+        const { id } = req.params;
+        let code = String(req.body?.code ?? "").trim();
+        const isStaff = req.user.rol === "Admin" || req.user.rol === "Trabajador";
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ error: "No es un ID válido" });
+        }
+
+        let booking = await bookingDatabaseModel.findById(id);
+        if (!booking) return res.status(404).json({ error: "No hay reserva con este ID" });
+
+        if (req.user.rol === "Usuario" && String(req.user.id) !== String(booking.client)) {
+            return res.status(403).json({ error: "No autorizado para esta reserva" });
+        }
+
+        if (!/^\d{5}$/.test(code)) {
+            if (isStaff && booking.checkInCode) {
+                code = booking.checkInCode;
+            } else {
+                return res.status(400).json({ error: `El código debe tener ${CHECKIN_CODE_LENGTH} dígitos` });
+            }
+        }
+
+        if (booking.status !== "Abierta") {
+            return res.status(400).json({ error: "Solo se puede hacer check-in en reservas abiertas" });
+        }
+
+        if (!isCheckInDayToday(booking)) {
+            return res.status(400).json({ error: "El check-in solo está disponible el día de entrada" });
+        }
+
+        if (!isCheckInCodeSendWindowOpen()) {
+            return res.status(400).json({
+                error: "El código estará disponible a partir de las 11:00 del día de entrada"
+            });
+        }
+
+        if (!booking.checkInCodeSentAt) {
+            await ensureCheckInCodeForBooking(booking);
+            booking = await bookingDatabaseModel.findById(id);
+        }
+
+        if (!booking.checkInCodeSentAt) {
+            return res.status(400).json({
+                error: "El código estará disponible a partir de las 11:00 del día de entrada"
+            });
+        }
+
+        if (booking.checkedInAt) {
+            return res.status(200).json({
+                message: "Check-in ya registrado",
+                booking: withBookingStayMeta(booking)
+            });
+        }
+
+        if (booking.checkInCode !== code) {
+            return res.status(401).json({ error: "Código incorrecto" });
+        }
+
+        booking.checkedInAt = new Date();
+        const saved = await booking.save();
+
+        auditLogModel
+            .create({
+                entity_type: "booking",
+                entity_id: saved._id,
+                action: "CHECK_IN",
+                actor_id: req.user.id,
+                actor_type: req.user.rol,
+                previous_state: null,
+                new_state: { checkedInAt: saved.checkedInAt },
+                timestamp: new Date()
+            })
+            .catch((err) => console.error("Error al crear audit log CHECK_IN:", err));
+
+        syncRoomOccupancyFromBookings().catch((err) =>
+            console.error("[rooms] Error sync ocupación tras check-in:", err)
+        );
+
+        return res.status(200).json({
+            message: "Check-in realizado correctamente",
+            booking: withBookingStayMeta(saved)
+        });
+    } catch (error) {
+        console.error("Error al verificar check-in:", error);
+        return res.status(500).json({ error: "Error del servidor al registrar el check-in" });
+    }
+}
+
+/**
+ * Registra el check-out el día de salida (desde las 11:00).
+ *
+ * @async
+ * @function verifyBookingCheckOut
+ */
+export async function verifyBookingCheckOut(req, res) {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ error: "No es un ID válido" });
+        }
+
+        const booking = await bookingDatabaseModel.findById(id);
+        if (!booking) return res.status(404).json({ error: "No hay reserva con este ID" });
+
+        if (req.user.rol === "Usuario" && String(req.user.id) !== String(booking.client)) {
+            return res.status(403).json({ error: "No autorizado para esta reserva" });
+        }
+
+        if (booking.status !== "Abierta") {
+            return res.status(400).json({ error: "Solo se puede hacer check-out en reservas abiertas" });
+        }
+
+        if (!booking.checkedInAt) {
+            return res.status(400).json({ error: "Debes hacer check-in antes del check-out" });
+        }
+
+        if (!isCheckOutDayToday(booking)) {
+            return res.status(400).json({ error: "El check-out solo está disponible el día de salida" });
+        }
+
+        if (!isCheckInCodeSendWindowOpen()) {
+            return res.status(400).json({
+                error: "El check-out estará disponible a partir de las 11:00 del día de salida"
+            });
+        }
+
+        if (booking.checkedOutAt) {
+            return res.status(200).json({
+                message: "Check-out ya registrado",
+                booking: withBookingStayMeta(booking)
+            });
+        }
+
+        booking.checkedOutAt = new Date();
+        const saved = await booking.save();
+
+        auditLogModel
+            .create({
+                entity_type: "booking",
+                entity_id: saved._id,
+                action: "CHECK_OUT",
+                actor_id: req.user.id,
+                actor_type: req.user.rol,
+                previous_state: null,
+                new_state: { checkedOutAt: saved.checkedOutAt },
+                timestamp: new Date()
+            })
+            .catch((err) => console.error("Error al crear audit log CHECK_OUT:", err));
+
+        syncRoomOccupancyFromBookings().catch((err) =>
+            console.error("[rooms] Error sync ocupación tras check-out:", err)
+        );
+
+        return res.status(200).json({
+            message: "Check-out realizado correctamente",
+            booking: withBookingStayMeta(saved)
+        });
+    } catch (error) {
+        console.error("Error al registrar check-out:", error);
+        return res.status(500).json({ error: "Error del servidor al registrar el check-out" });
+    }
+}
+
+/**
  * Elimina una reserva
  *
  * @async
@@ -713,8 +1083,9 @@ export async function payBooking(req, res) {
             return res.status(400).json({ error: 'Solo se pueden facturar reservas abiertas o finalizadas (no canceladas)' });
         }
 
-        const mappedExtras = mapExtrasFromRequestBody(req.body);
         const room = await roomDatabaseModel.findById(booking.room).lean();
+        let mappedExtras = mapExtrasFromRequestBody(req.body);
+        if (mappedExtras.length === 0) mappedExtras = mapExtrasFromRoom(room);
         const calc = applyInvoiceMath(booking, mappedExtras, req.body, room);
 
         if (!booking.invoice_number) {
@@ -796,8 +1167,9 @@ export async function patchBookingInvoice(req, res) {
             return res.status(400).json({ error: 'La reserva no tiene factura; use POST /booking/:id/pay' });
         }
 
-        const mappedExtras = mapExtrasFromRequestBody(req.body);
         const room = await roomDatabaseModel.findById(booking.room).lean();
+        let mappedExtras = mapExtrasFromRequestBody(req.body);
+        if (mappedExtras.length === 0) mappedExtras = mapExtrasFromRoom(room);
         const calc = applyInvoiceMath(booking, mappedExtras, req.body, room);
 
         booking.invoiceIssuer = {

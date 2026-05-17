@@ -100,7 +100,12 @@ const bookingDatabaseSchema = new Schema({
             unitPrice: { type: Number, required: true },
             total: { type: Number, required: true }
         }]
-    }
+    },
+    /** Código de 5 dígitos para check-in (se expone en API solo el día de entrada, desde las 11:00). */
+    checkInCode: { type: String, default: null },
+    checkInCodeSentAt: { type: Date, default: null },
+    checkedInAt: { type: Date, default: null },
+    checkedOutAt: { type: Date, default: null }
 }, {
     toJSON: {
         /**
@@ -129,6 +134,7 @@ bookingDatabaseSchema.set('toJSON', {
         ret.offer = Math.floor(ret.offer);
         ret.guests = Math.floor(ret.guests);
         ret.totalNights = Math.floor(ret.totalNights);
+        delete ret.checkInCode;
         return ret;
     }
 });

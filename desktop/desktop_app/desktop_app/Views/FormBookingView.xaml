@@ -10,6 +10,10 @@
              d:DesignWidth="800"
              Style="{StaticResource UserControlBase}"
              DataContext="{x:Static viewModel:FormBookingViewModel.Instance}">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
     
     <Grid Margin="18">
         <Grid.RowDefinitions>
@@ -30,6 +34,34 @@
                 <Border Style="{StaticResource IdWrapper}">
                     <TextBlock Style="{StaticResource UpdateIdStyle}" Text="{Binding Booking.Id}"/>
                 </Border>
+
+                <Border Margin="0,12,0,0"
+                        Padding="12,8"
+                        CornerRadius="8"
+                        Background="#E8F5E9"
+                        BorderBrush="#A5D6A7"
+                        BorderThickness="1"
+                        Visibility="{Binding ShowCheckInPanel, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding CheckInStatusText}"
+                               Foreground="#1B5E20"
+                               FontWeight="Normal"
+                               FontSize="13"
+                               TextWrapping="Wrap"/>
+                </Border>
+
+                <Border Margin="0,8,0,0"
+                        Padding="12,8"
+                        CornerRadius="8"
+                        Background="#E3F2FD"
+                        BorderBrush="#90CAF9"
+                        BorderThickness="1"
+                        Visibility="{Binding ShowCheckOutPanel, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding CheckOutStatusText}"
+                               Foreground="#0D47A1"
+                               FontWeight="Normal"
+                               FontSize="13"
+                               TextWrapping="Wrap"/>
+                </Border>
             </StackPanel>
         </Border>
         
@@ -41,6 +73,16 @@
                     Style="{StaticResource SaveBtn}"
                     Command="{Binding DownloadInvoiceCommand}"
                     IsEnabled="{Binding Disabled}"/>
+            <Button Content="Registrar check-in"
+                    Style="{StaticResource SaveBtn}"
+                    Command="{Binding RegisterCheckInCommand}"
+                    Visibility="{Binding ShowCheckInPanel, Converter={StaticResource BoolToVis}}"
+                    IsEnabled="{Binding CanRegisterCheckIn}"/>
+            <Button Content="Registrar check-out"
+                    Style="{StaticResource SaveBtn}"
+                    Command="{Binding RegisterCheckOutCommand}"
+                    Visibility="{Binding ShowCheckOutPanel, Converter={StaticResource BoolToVis}}"
+                    IsEnabled="{Binding CanRegisterCheckOut}"/>
         </StackPanel>
         
         <Grid Grid.Column="0" Grid.Row="2" Margin="0 15 15 0" HorizontalAlignment="Stretch">

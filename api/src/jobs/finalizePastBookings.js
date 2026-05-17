@@ -52,7 +52,7 @@ export async function finalizePastBookings() {
             room_id: roomId,
             previous_status: currentStatus ?? null,
             new_status: 'cleaning',
-            reason: 'auto-checkout (checkOutDate passed) → limpieza',
+            reason: 'auto-checkout → limpieza',
             changed_by: null,
             changed_by_role: 'SYSTEM',
             changed_at: new Date()

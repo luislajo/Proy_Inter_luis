@@ -1,4 +1,4 @@
-﻿using desktop_app.Services;
+using desktop_app.Services;
 using System.Text.Json.Serialization;
 
 namespace desktop_app.Models
@@ -74,7 +74,13 @@ namespace desktop_app.Models
 
         /// <summary>Estado operativo actual (available/occupied/cleaning/maintenance/blocked).</summary>
         [JsonPropertyName("status")]
-        public string Status { get; set; } = "available";
+        public string Status
+        {
+            get => _status;
+            set => _status = NormalizeStatus(value);
+        }
+
+        private string _status = "available";
 
         [JsonIgnore]
         public string StatusLabel => Status switch
@@ -86,6 +92,29 @@ namespace desktop_app.Models
             "blocked" => "Bloqueada",
             _ => Status
         };
+
+        /// <summary>Código de estado en minúsculas (inglés API); tolera etiquetas en español.</summary>
+        public static string NormalizeStatus(string? value, bool? isAvailable = null)
+        {
+            var s = (value ?? "").Trim().ToLowerInvariant();
+            return s switch
+            {
+                "available" or "disponible" => "available",
+                "occupied" or "ocupada" => "occupied",
+                "cleaning" or "limpieza" => "cleaning",
+                "maintenance" or "mantenimiento" => "maintenance",
+                "blocked" or "bloqueada" => "blocked",
+                "" when isAvailable == false => "occupied",
+                "" => "available",
+                _ => s
+            };
+        }
+
+        /// <summary>Alinea <see cref="Status"/> tras deserializar (legacy <c>isAvailable</c> sin código).</summary>
+        public void ApplyStatusFromApi()
+        {
+            Status = NormalizeStatus(Status, IsAvailable);
+        }
 
         /// <summary>Valoración media (0-5).</summary>
         [JsonPropertyName("rate")]

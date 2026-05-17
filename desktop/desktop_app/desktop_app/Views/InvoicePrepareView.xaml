@@ -4,8 +4,12 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="880"
+             d:DesignHeight="600" d:DesignWidth="960"
              Style="{StaticResource UserControlBase}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
     <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -15,13 +19,13 @@
         <Border Style="{StaticResource HeaderWrapper}">
             <StackPanel>
                 <TextBlock Text="Factura — configuración" Style="{StaticResource HeaderMainTitle}"/>
-                <TextBlock Text="{Binding RoomSummary}" Foreground="#6B7280" Margin="0,6,0,0"/>
+                <TextBlock Text="{Binding RoomSummary}" Foreground="#D6EAF8" FontSize="13" Margin="0,6,0,0"/>
             </StackPanel>
         </Border>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
             <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
                     <Button Content="Volver" Style="{StaticResource RedReturnBtn}" Command="{Binding BackCommand}" Width="96"/>
                     <Button Content="Guardar y abrir PDF" Style="{StaticResource SaveBtn}"
                             Command="{Binding ApplyAndDownloadCommand}" Margin="10,0,0,0" MinWidth="160"/>
@@ -30,77 +34,223 @@
                             IsEnabled="{Binding HasExistingInvoice}"/>
                 </StackPanel>
 
-                <TextBlock Text="Datos de empresa facturada" FontWeight="SemiBold" Margin="0,8,0,8"/>
-                <Label Content="Nombre o razón social" Style="{StaticResource LabelForm}"/>
-                <TextBox Text="{Binding CompanyName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}"/>
-                <Label Content="CIF" Style="{StaticResource LabelForm}"/>
-                <TextBox Text="{Binding CompanyTaxId, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource TextBoxForm}"
-                         ToolTip="Ejemplo de CIF de empresa en España: B12345678"/>
-                <TextBlock Text="Ej.: B12345678 (empresa ficticia)"
-                           Foreground="#6B7280" FontSize="11" Margin="0,-2,0,6"/>
-                <Label Content="Dirección fiscal" Style="{StaticResource LabelForm}"/>
-                <TextBox Text="{Binding CompanyAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}" TextWrapping="Wrap" MinHeight="44"/>
+                <!-- Empresa facturada (opcional) -->
+                <Border Background="#FFFFFF" CornerRadius="14" Padding="14" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="Empresa facturada" FontWeight="SemiBold" FontSize="15" Foreground="#1F2937" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding StayDatesText}" Foreground="#6B7280" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.2*"/>
+                                <ColumnDefinition Width="0.7*"/>
+                                <ColumnDefinition Width="1.1*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <Label Content="Razón social" Style="{StaticResource LabelForm}" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding CompanyName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBoxForm}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                <Label Content="CIF" Style="{StaticResource LabelForm}" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding CompanyTaxId, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource TextBoxForm}"
+                                         ToolTip="Ej.: B12345678"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <Label Content="Dirección" Style="{StaticResource LabelForm}" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding CompanyAddress, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource TextBoxForm}"
+                                         TextWrapping="Wrap"
+                                         MinHeight="36"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
 
-                <TextBlock Text="Extras de la habitación" FontWeight="SemiBold" Margin="0,12,0,4"/>
-                <TextBlock Text="Si la habitación no tiene extras, la tabla puede quedar vacía."
-                           Foreground="#6B7280" FontSize="12" Margin="0,0,0,6">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ShowExtrasEmptyHint}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-
-                <Grid Margin="6,2">
+                <!-- Conceptos facturados + totales -->
+                <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="0.75*"/>
                     </Grid.ColumnDefinitions>
 
-                    <ListView x:Name="ExtrasListView"
-                              Grid.Column="0"
-                              ItemsSource="{Binding ExtraRows}"
-                              AlternationCount="2"
-                              ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
-                              BorderThickness="0.5"
-                              MinHeight="120"
-                              MaxHeight="280"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                              Focusable="False"
-                              SizeChanged="ExtrasList_SizeChanged">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="Concepto" Width="260" HeaderContainerStyle="{StaticResource TableHeader}">
-                                    <GridViewColumn.CellTemplate>
+                    <Border Grid.Column="0" Background="#FFFFFF" CornerRadius="14" Padding="14" Margin="0,0,10,0">
+                        <StackPanel>
+                            <TextBlock Text="Conceptos facturados" FontWeight="SemiBold" FontSize="15" Foreground="#1F2937" Margin="0,0,0,8"/>
+
+
+                            <ListView x:Name="BilledRowsListView"
+                                      ItemsSource="{Binding BilledRows}"
+                                      AlternationCount="2"
+                                      ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
+                                      BorderThickness="0.5"
+                                      MinHeight="200"
+                                      MaxHeight="360"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      Focusable="False"
+                                      SizeChanged="BilledRowsList_SizeChanged">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Concepto" Width="240" HeaderContainerStyle="{StaticResource TableHeader}">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="2">
+                                                        <TextBlock Text="{Binding Name}" Padding="4" TextWrapping="Wrap" VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsStayLine}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                 BorderThickness="0" Background="Transparent" Padding="4,2" VerticalAlignment="Center">
+                                                            <TextBox.Style>
+                                                                <Style TargetType="TextBox" BasedOn="{StaticResource TextBoxForm}">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsStayLine}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBox.Style>
+                                                        </TextBox>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Cant." Width="56" HeaderContainerStyle="{StaticResource TableHeader}">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding Quantity}" Padding="6,4" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsStayLine}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <TextBox Text="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                 BorderThickness="0" Background="Transparent" Padding="4,2" HorizontalContentAlignment="Center">
+                                                            <TextBox.Style>
+                                                                <Style TargetType="TextBox" BasedOn="{StaticResource TextBoxForm}">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsStayLine}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBox.Style>
+                                                        </TextBox>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="€ / u." Width="80" HeaderContainerStyle="{StaticResource TableHeader}">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding UnitPrice, StringFormat={}{0:N2}}"
+                                                                   Padding="6,4" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsStayLine}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <TextBox Text="{Binding UnitPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                 BorderThickness="0" Background="Transparent" Padding="4,2" HorizontalContentAlignment="Right">
+                                                            <TextBox.Style>
+                                                                <Style TargetType="TextBox" BasedOn="{StaticResource TextBoxForm}">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsStayLine}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBox.Style>
+                                                        </TextBox>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Total" Width="88" HeaderContainerStyle="{StaticResource TableHeader}">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding LineTotalDisplay}"
+                                                               Padding="6,4"
+                                                               HorizontalAlignment="Right"
+                                                               FontWeight="SemiBold"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Background="#FFFFFF" CornerRadius="14" Padding="14">
+                        <StackPanel>
+                            <TextBlock Text="Resumen fiscal" FontWeight="SemiBold" FontSize="15" Foreground="#1F2937" Margin="0,0,0,10"/>
+                            <Border Background="#F7FAFD" CornerRadius="10" Padding="12,10">
+                                <ItemsControl ItemsSource="{Binding InvoicePreviewLines}">
+                                    <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding Name}" Padding="6,3" VerticalAlignment="Center" MinHeight="22" Margin="2"/>
+                                            <Grid Margin="0,5">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding Concept}" TextWrapping="Wrap">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="FontSize" Value="13"/>
+                                                            <Setter Property="Foreground" Value="#374151"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsTotalRow}" Value="True">
+                                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                                    <Setter Property="FontSize" Value="15"/>
+                                                                    <Setter Property="Foreground" Value="#0f4c75"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Grid.Column="1" Text="{Binding AmountText}" Margin="10,0,0,0" HorizontalAlignment="Right">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="FontSize" Value="13"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsTotalRow}" Value="True">
+                                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                                    <Setter Property="FontSize" Value="15"/>
+                                                                    <Setter Property="Foreground" Value="#0f4c75"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Grid>
                                         </DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                                <GridViewColumn Header="Cant." Width="72" HeaderContainerStyle="{StaticResource TableHeader}">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Quantity}" Padding="6,3" VerticalAlignment="Center" MinHeight="22" Margin="2"/>
-                                        </DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                                <GridViewColumn Header="€ / u." Width="138" HeaderContainerStyle="{StaticResource TableHeader}">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding UnitPrice, StringFormat={}{0:N2}}" Padding="6,3" VerticalAlignment="Center" MinHeight="22" Margin="2"/>
-                                        </DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </StackPanel>
         </ScrollViewer>

@@ -99,7 +99,7 @@ namespace desktop_app.ViewModels
         private async Task LoadLogsAsync()
         {
             IsLoading = true;
-            StatusText = "Cargando...";
+            StatusText = "Cargando historial...";
 
             try
             {
@@ -110,12 +110,10 @@ namespace desktop_app.ViewModels
                     _allLogs.Add(log);
 
                 ApplyFilter();
-
-                StatusText = $"{_allLogs.Count} registro(s) encontrado(s)";
             }
             catch (Exception ex)
             {
-                StatusText = "Error al cargar";
+                StatusText = "Error conectando con la API.";
                 MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -166,7 +164,7 @@ namespace desktop_app.ViewModels
             foreach (var log in filtered.OrderByDescending(l => l.Timestamp))
                 Logs.Add(log);
 
-            StatusText = $"Mostrando {Logs.Count} de {_allLogs.Count} registro(s)";
+            StatusText = $"Resultados: {Logs.Count}";
         }
 
         private void ClearFilters()

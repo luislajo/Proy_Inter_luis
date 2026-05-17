@@ -349,6 +349,8 @@
         <Setter Property="CornerRadius" Value="4"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Style.Triggers>
             <DataTrigger Binding="{Binding Status}" Value="available">
                 <Setter Property="Background" Value="#28a745"/>
@@ -415,6 +417,12 @@
             <DataTrigger Binding="{Binding Action}" Value="CANCEL">
                 <Setter Property="Background" Value="#dc3545"/>
             </DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="CHECK_IN">
+                <Setter Property="Background" Value="#28a745"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Action}" Value="CHECK_OUT">
+                <Setter Property="Background" Value="#17a2b8"/>
+            </DataTrigger>
         </Style.Triggers>
     </Style>
     
@@ -452,7 +460,23 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
     </Style>
-    
+
+    <!-- Texto dentro de píldoras de estado (habitaciones): peso normal, sin padding de celda GridView -->
+    <Style x:Key="RoomStatusPillTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Foreground" Value="#ffffff"/>
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="RoomStatusPillCardTextStyle" TargetType="TextBlock" BasedOn="{StaticResource RoomStatusPillTextStyle}">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Padding" Value="8,3"/>
+    </Style>
+
     <Style x:Key="UpdateBookingBtn" TargetType="Button">
         <Setter Property="Background" Value="#007bff"/>
         <Setter Property="Foreground" Value="White"/>
@@ -1094,9 +1118,9 @@
         <Border Background="White"
             BorderBrush="#E6E8EF"
             BorderThickness="1"
-            CornerRadius="16"
-            Padding="16"
-            Margin="0,0,18,18"
+            CornerRadius="10"
+            Padding="14"
+            Margin="0,0,16,16"
             SnapsToDevicePixels="True">
 
             <Grid>
@@ -1191,7 +1215,7 @@
                                 <TextBlock Text="{Binding AverageRating, StringFormat='{}{0:F1}'}" 
                                            Foreground="White" 
                                            FontSize="12" 
-                                           FontWeight="SemiBold"/>
+                                           FontWeight="Normal"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -1202,8 +1226,9 @@
 
                 <!-- ===== Cabecera: Habitación ===== -->
                 <TextBlock Grid.Row="1"
-                           FontSize="20"
-                           FontWeight="Bold"
+                           FontSize="17"
+                           FontWeight="Normal"
+                           Foreground="#1f3b4d"
                            Text="{Binding RoomNumber, StringFormat=Habitación {0}}"/>
 
                 <!-- ===== Tipo + Badge Estado ===== -->
@@ -1214,16 +1239,16 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Foreground="#6B7280"
+                               FontSize="13"
+                               FontWeight="Normal"
                                Text="{Binding Type}"
                                VerticalAlignment="Center"/>
 
                     <Border Grid.Column="1"
                             Style="{StaticResource RoomStatusPillStyle}"
                             VerticalAlignment="Center">
-                        <TextBlock FontWeight="SemiBold"
-                                   FontSize="10"
-                                   Foreground="White"
-                                   Text="{Binding StatusLabel}"/>
+                        <TextBlock Text="{Binding StatusLabel}"
+                                   Style="{StaticResource RoomStatusPillCardTextStyle}"/>
                     </Border>
                 </Grid>
 
@@ -1243,7 +1268,8 @@
                            Text="Máx. huéspedes:"/>
 
                     <TextBlock Grid.Column="1"
-                           FontWeight="Bold"
+                           FontWeight="Normal"
+                           Foreground="#1f3b4d"
                            Text="{Binding MaxGuests}"/>
                 </Grid>
 
@@ -1258,7 +1284,8 @@
                            Text="Precio/noche:"/>
 
                     <TextBlock Grid.Column="1"
-                           FontWeight="Bold"
+                           FontWeight="Normal"
+                           Foreground="#1f3b4d"
                            Text="{Binding PricePerNight, StringFormat={}{0}€}"/>
                 </Grid>
 

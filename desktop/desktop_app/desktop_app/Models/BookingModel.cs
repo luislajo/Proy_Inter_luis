@@ -42,11 +42,41 @@ namespace desktop_app.Models
         [JsonPropertyName("invoice_number")]
         public string? InvoiceNumber { get; set; }
 
+        [JsonPropertyName("checkInCode")]
+        public string? CheckInCode { get; set; }
+
+        [JsonPropertyName("checkedIn")]
+        public bool CheckedIn { get; set; }
+
+        [JsonPropertyName("canSubmitCheckIn")]
+        public bool CanSubmitCheckIn { get; set; }
+
+        [JsonPropertyName("checkInCodeSent")]
+        public bool CheckInCodeSent { get; set; }
+
+        [JsonPropertyName("checkedOut")]
+        public bool CheckedOut { get; set; }
+
+        [JsonPropertyName("canSubmitCheckOut")]
+        public bool CanSubmitCheckOut { get; set; }
+
+        [JsonPropertyName("isCheckInDayToday")]
+        public bool IsCheckInDayToday { get; set; }
+
+        [JsonPropertyName("isCheckOutDayToday")]
+        public bool IsCheckOutDayToday { get; set; }
+
+        [JsonPropertyName("stayWindowOpen")]
+        public bool StayWindowOpen { get; set; }
+
         [JsonPropertyName("invoiceIssuer")]
         public InvoiceIssuerDto? InvoiceIssuer { get; set; }
 
         [JsonPropertyName("invoiceCompany")]
         public InvoiceIssuerDto? InvoiceCompany { get; set; }
+
+        [JsonPropertyName("invoiceBreakdown")]
+        public InvoiceBreakdownDto? InvoiceBreakdown { get; set; }
 
         [JsonIgnore] 
         public string RoomNumber { get; set; } = "";
@@ -76,6 +106,15 @@ namespace desktop_app.Models
                 RoomNumber = RoomNumber,
                 ClientName = ClientName,
                 ClientDni = ClientDni,
+                CheckInCode = CheckInCode,
+                CheckedIn = CheckedIn,
+                CanSubmitCheckIn = CanSubmitCheckIn,
+                CheckInCodeSent = CheckInCodeSent,
+                CheckedOut = CheckedOut,
+                CanSubmitCheckOut = CanSubmitCheckOut,
+                IsCheckInDayToday = IsCheckInDayToday,
+                IsCheckOutDayToday = IsCheckOutDayToday,
+                StayWindowOpen = StayWindowOpen,
             };
         }
 
@@ -109,5 +148,26 @@ namespace desktop_app.Models
 
         [JsonPropertyName("address")]
         public string? Address { get; set; }
+    }
+
+    public class InvoiceBreakdownDto
+    {
+        [JsonPropertyName("extras")]
+        public List<InvoiceExtraLineDto> Extras { get; set; } = new();
+    }
+
+    public class InvoiceExtraLineDto
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = "";
+
+        [JsonPropertyName("quantity")]
+        public int Quantity { get; set; } = 1;
+
+        [JsonPropertyName("unitPrice")]
+        public decimal UnitPrice { get; set; }
+
+        [JsonPropertyName("total")]
+        public decimal Total { get; set; }
     }
 }

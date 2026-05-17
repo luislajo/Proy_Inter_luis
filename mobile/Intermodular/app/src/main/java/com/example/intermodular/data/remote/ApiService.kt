@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.data.remote
+package com.example.intermodular.data.remote
 
 import com.example.intermodular.data.remote.dto.BookingDto
 import com.example.intermodular.data.remote.dto.CreateBookingDto
@@ -12,6 +12,8 @@ import com.example.intermodular.data.remote.dto.RoomsResponseDto
 import com.example.intermodular.data.remote.dto.IncidentsResponseDto
 import com.example.intermodular.data.remote.dto.UpdateBookingDto
 import com.example.intermodular.data.remote.dto.PayBookingResponseDto
+import com.example.intermodular.data.remote.dto.CheckInRequestDto
+import com.example.intermodular.data.remote.dto.CheckInResponseDto
 import com.example.intermodular.data.remote.dto.UpdateUserRequestDto
 import com.example.intermodular.data.remote.dto.UpdateUserResponseDto
 import com.example.intermodular.data.remote.dto.UserDto
@@ -115,6 +117,19 @@ interface ApiService {
      */
     @PATCH("booking/{id}/cancel")
     suspend fun cancelBooking(@Path("id") id: String): BookingDto
+
+    /**
+     * Valida el código de 5 dígitos enviado por correo y registra el check-in.
+     */
+    @POST("booking/{id}/check-in")
+    suspend fun verifyCheckIn(
+        @Path("id") id: String,
+        @Body body: CheckInRequestDto
+    ): CheckInResponseDto
+
+    /** Registra el check-out el día de salida (desde las 11:00). */
+    @POST("booking/{id}/check-out")
+    suspend fun verifyCheckOut(@Path("id") id: String): CheckInResponseDto
 
     /**
      * Edita una reserva existente

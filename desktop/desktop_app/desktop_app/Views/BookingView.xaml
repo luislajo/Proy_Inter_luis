@@ -238,44 +238,87 @@
                                     Padding="12"
                                     Margin="0,14,0,0">
                                 <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="2*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="200"/>
+                                        <ColumnDefinition Width="130"/>
+                                        <ColumnDefinition Width="1.3*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Campo filtro -->
-                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
                                         <Label Content="DNI / NIE" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
                                         <TextBox Text="{Binding InvoiceDocumentFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource TextBoxForm}"/>
                                     </StackPanel>
 
-                                    <!-- Botón buscar -->
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Orientation="Horizontal">
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,10,10">
+                                        <Label Content="Estado" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <ComboBox Style="{StaticResource DropdownStyle}"
+                                                  ItemsSource="{Binding InvoiceStatusFilterOptions}"
+                                                  SelectedItem="{Binding InvoiceFilterStatus, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,10">
+                                        <Label Content="Rango de fechas" Style="{StaticResource LabelForm}" Margin="0,0,0,4"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <DatePicker Width="200"
+                                                        Language="es-ES"
+                                                        SelectedDate="{Binding InvoiceFilterFromDate, Mode=TwoWay}"
+                                                        Style="{StaticResource DatePickerForm}"/>
+                                            <TextBlock Text=" - " VerticalAlignment="Center" Margin="4,0"/>
+                                            <DatePicker Width="200"
+                                                        Language="es-ES"
+                                                        SelectedDate="{Binding InvoiceFilterToDate, Mode=TwoWay}"
+                                                        Style="{StaticResource DatePickerForm}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="1"
+                                                Grid.ColumnSpan="3"
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Right">
+                                        <Button Style="{StaticResource ClearFiltersBtn}"
+                                                Content="Limpiar"
+                                                Command="{Binding ClearInvoiceFiltersCommand}"
+                                                Height="38"
+                                                Padding="15,0"
+                                                Margin="0,0,10,0"
+                                                FontSize="14"/>
                                         <Button Style="{StaticResource SaveBtn}"
                                                 Content="Buscar"
-                                                Command="{Binding LoadInvoicesCommand}"
+                                                Command="{Binding SearchInvoicesCommand}"
                                                 Height="38"
                                                 Width="120"
-                                                Margin="0,0,0,0"
                                                 FontSize="14"
                                                 FontWeight="SemiBold"/>
                                     </StackPanel>
-
-                                    <!-- Texto de estado -->
-                                    <TextBlock Grid.Column="2"
-                                               Margin="16,8,0,0"
-                                               VerticalAlignment="Center"
-                                               Foreground="#6B7280"
-                                               Text="{Binding InvoiceStatusText}"/>
                                 </Grid>
                             </Border>
                         </Grid>
                     </Border>
 
+                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="{Binding InvoiceStatusText}"
+                                   Foreground="#6B7280"
+                                   VerticalAlignment="Center"/>
+
+                        <Button Grid.Column="1"
+                                Style="{StaticResource SaveBtn}"
+                                Content="Refrescar"
+                                Command="{Binding LoadInvoicesCommand}"/>
+                    </Grid>
+
                     <ListView Grid.Row="2"
                               ItemsSource="{Binding Invoices}"
+                              SizeChanged="ListView_SizeChanged"
                               AlternationCount="2"
                               ItemContainerStyle="{StaticResource AlternatingListViewItemStyle}"
                               Margin="10 3"

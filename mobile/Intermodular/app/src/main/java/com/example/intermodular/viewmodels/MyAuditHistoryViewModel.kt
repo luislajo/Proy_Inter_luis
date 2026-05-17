@@ -54,7 +54,9 @@ class MyAuditHistoryViewModel(
                 val sorted = dtos.sortedByDescending { dto ->
                     runCatching { Instant.parse(dto.timestamp) }.getOrElse { Instant.EPOCH }
                 }
-                val entries = sorted.map { it.toEntry() }
+                val entries = sorted
+                    .filter { it.action != "CHECK_IN_CODE_SENT" }
+                    .map { it.toEntry() }
                 _uiState.value = MyAuditHistoryUiState(
                     isLoading = false,
                     checkInOutEntries = entries.filter { !it.isPayment },
@@ -103,7 +105,9 @@ class MyAuditHistoryViewModel(
     }
 
     private fun String.toActionLabel(): String = when (this) {
-        "CREATE" -> "Check-in"
+        "CREATE" -> "Reserva creada"
+        "CHECK_IN" -> "Check-in"
+        "CHECK_OUT" -> "Check-out"
         "PAYMENT" -> "Pago"
         "UPDATE" -> "Cambio en la reserva"
         "CANCEL" -> "Reserva cancelada"

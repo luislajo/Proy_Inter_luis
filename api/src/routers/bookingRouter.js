@@ -13,7 +13,9 @@ import {
     deleteBooking,
     payBooking,
     patchBookingInvoice,
-    getBookingInvoicePdf
+    getBookingInvoicePdf,
+    verifyBookingCheckIn,
+    verifyBookingCheckOut
 } from "../controllers/bookingController.js";
 import { getAuditLogByBookingId } from "../controllers/auditLogController.js";
 import { verifyToken, authorizeRoles } from "../middlewares/authMiddleware.js";
@@ -30,6 +32,8 @@ router.get("/", verifyToken, getBookings);
 
 router.post("/", verifyToken, createBooking);
 router.post("/:id/pay", verifyToken, payBooking);
+router.post("/:id/check-in", verifyToken, verifyBookingCheckIn);
+router.post("/:id/check-out", verifyToken, verifyBookingCheckOut);
 
 router.patch("/:id/cancel", verifyToken, auditMiddleware("booking", "id"), cancelBooking);
 router.patch("/:id/invoice", verifyToken, authorizeRoles(["Admin", "Trabajador"]), patchBookingInvoice);

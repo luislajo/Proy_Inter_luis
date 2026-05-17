@@ -130,8 +130,7 @@
                                                         <Setter Property="Foreground" Value="#6B7280"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsChanged}" Value="True">
-                                                                <Setter Property="Foreground" Value="#B45309"/>
-                                                                <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                                                <Setter Property="Foreground" Value="#dc3545"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>

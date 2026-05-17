@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="desktop_app.Views.RoomView"
+<UserControl x:Class="desktop_app.Views.RoomView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -262,7 +262,7 @@
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <Border Style="{StaticResource RoomStatusPillStyle}">
-                                                <TextBlock Text="{Binding StatusLabel}" Style="{StaticResource GridViewCellText}" Foreground="#ffffff"/>
+                                                <TextBlock Text="{Binding StatusLabel}" Style="{StaticResource RoomStatusPillTextStyle}"/>
                                             </Border>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>

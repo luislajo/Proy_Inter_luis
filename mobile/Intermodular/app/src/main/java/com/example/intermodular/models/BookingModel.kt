@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.models
+package com.example.intermodular.models
 
 import java.time.LocalDate
 
@@ -33,5 +33,14 @@ data class Booking(
     val status: String,
     val guests: Int,
     val totalNights: Int,
-    val invoiceNumber: String? = null
+    val invoiceNumber: String? = null,
+    val checkInCode: String? = null,
+    val checkInCodeSent: Boolean = false,
+    val checkedIn: Boolean = false,
+    val canSubmitCheckIn: Boolean = false,
+    val checkedOut: Boolean = false,
+    val canSubmitCheckOut: Boolean = false,
+    val isCheckInDayToday: Boolean = false,
+    val isCheckOutDayToday: Boolean = false,
+    val stayWindowOpen: Boolean = false
 )

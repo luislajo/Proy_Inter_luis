@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.viewmodels
+package com.example.intermodular.viewmodels
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -86,6 +86,15 @@ class MyBookingDetailsViewModel (
     private val _invoiceOpening = MutableStateFlow(false)
     val invoiceOpening: StateFlow<Boolean> = _invoiceOpening
 
+    private val _checkInSubmitting = MutableStateFlow(false)
+    val checkInSubmitting: StateFlow<Boolean> = _checkInSubmitting
+
+    private val _checkOutSubmitting = MutableStateFlow(false)
+    val checkOutSubmitting: StateFlow<Boolean> = _checkOutSubmitting
+
+    private val _stayActionMessage = MutableStateFlow<String?>(null)
+    val stayActionMessage: StateFlow<String?> = _stayActionMessage
+
     // ==================== MÉTODOS PÚBLICOS ====================
     /**
      * Bloque de inicio del ViewModel
@@ -152,6 +161,46 @@ class MyBookingDetailsViewModel (
      */
     fun checkOutDateToMilliseconds(): Long? {
         return _booking.value?.checkOutDate?.let { localDateToUtcMillis(it) }
+    }
+
+    fun submitCheckIn() {
+        val code = _booking.value?.checkInCode
+        if (code.isNullOrBlank() || code.length != 5) {
+            _errorMessage.value = "El código estará disponible a partir de las 11:00 del día de entrada"
+            return
+        }
+        viewModelScope.launch {
+            _checkInSubmitting.value = true
+            _errorMessage.value = null
+            try {
+                _booking.value = bookingRepository.verifyCheckIn(bookingId, code)
+                _stayActionMessage.value = "Check-in registrado. Lo verás en Mi historial."
+            } catch (e: Exception) {
+                _errorMessage.value = ApiErrorHandler.getErrorMessage(e)
+            } finally {
+                _checkInSubmitting.value = false
+            }
+        }
+    }
+
+    fun submitCheckOut() {
+        viewModelScope.launch {
+            _checkOutSubmitting.value = true
+            _errorMessage.value = null
+            _stayActionMessage.value = null
+            try {
+                _booking.value = bookingRepository.verifyCheckOut(bookingId)
+                _stayActionMessage.value = "Check-out registrado. Lo verás en Mi historial."
+            } catch (e: Exception) {
+                _errorMessage.value = ApiErrorHandler.getErrorMessage(e)
+            } finally {
+                _checkOutSubmitting.value = false
+            }
+        }
+    }
+
+    fun clearStayActionMessage() {
+        _stayActionMessage.value = null
     }
 
     fun openInvoicePdf(context: Context) {

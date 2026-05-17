@@ -1,4 +1,4 @@
-﻿package com.example.intermodular.data.remote.mapper
+package com.example.intermodular.data.remote.mapper
 
 
 import com.example.intermodular.data.remote.dto.BookingDto
@@ -32,6 +32,15 @@ fun BookingDto.toDomain() : Booking {
         status = status,
         guests = guests,
         totalNights = totalNights,
-        invoiceNumber = invoice_number
+        invoiceNumber = invoice_number,
+        checkInCode = checkInCode,
+        checkInCodeSent = checkInCodeSent,
+        checkedIn = checkedIn,
+        canSubmitCheckIn = canSubmitCheckIn,
+        checkedOut = checkedOut,
+        canSubmitCheckOut = canSubmitCheckOut,
+        isCheckInDayToday = isCheckInDayToday,
+        isCheckOutDayToday = isCheckOutDayToday,
+        stayWindowOpen = stayWindowOpen
     )
 }

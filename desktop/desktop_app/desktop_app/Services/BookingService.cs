@@ -14,6 +14,12 @@ namespace desktop_app.Services
             public BookingModel? booking { get; set; }
         }
 
+        public class CheckInBookingResponse
+        {
+            public string? message { get; set; }
+            public BookingModel? booking { get; set; }
+        }
+
         /// <summary>
         /// Obtiene las reservas de la API
         /// </summary>
@@ -173,6 +179,31 @@ namespace desktop_app.Services
             var cancelBooking = await response.Content.ReadFromJsonAsync<BookingModel>();
 
             return cancelBooking;
+        }
+
+        /// <summary>Registra el check-in del huésped (código opcional para recepción).</summary>
+        public static async Task<BookingModel?> VerifyCheckInAsync(string bookingId, string? code = null)
+        {
+            var payload = new { code = code ?? "" };
+            var response = await CreateResponse($"{bookingId}/check-in", payload, HttpMethod.Post);
+            var data = await response.Content.ReadFromJsonAsync<CheckInBookingResponse>();
+            return NormalizeBookingDates(data?.booking);
+        }
+
+        public static async Task<BookingModel?> VerifyCheckOutAsync(string bookingId)
+        {
+            var response = await CreateResponse($"{bookingId}/check-out", new { }, HttpMethod.Post);
+            var data = await response.Content.ReadFromJsonAsync<CheckInBookingResponse>();
+            return NormalizeBookingDates(data?.booking);
+        }
+
+        private static BookingModel? NormalizeBookingDates(BookingModel? booking)
+        {
+            if (booking == null) return null;
+            booking.CheckInDate = DateTime.SpecifyKind(booking.CheckInDate, DateTimeKind.Utc).ToLocalTime();
+            booking.CheckOutDate = DateTime.SpecifyKind(booking.CheckOutDate, DateTimeKind.Utc).ToLocalTime();
+            booking.PayDate = DateTime.SpecifyKind(booking.PayDate, DateTimeKind.Utc).ToLocalTime();
+            return booking;
         }
 
         

@@ -510,6 +510,7 @@ namespace desktop_app.ViewModels.Room
             // Cargar media de reseñas para cada habitación
             foreach (var room in response.Items)
             {
+                room.ApplyStatusFromApi();
                 var reviews = await Services.ReviewService.GetReviewsByRoomAsync(room.Id);
                 if (reviews.Count > 0)
                 {
@@ -536,6 +537,10 @@ namespace desktop_app.ViewModels.Room
             {
                 return;
             }
+
+            foreach (var room in items)
+                room.ApplyStatusFromApi();
+
             BoardRooms = new ObservableCollection<RoomModel>(items);
         }
 
